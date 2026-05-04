@@ -16,8 +16,9 @@
     "deploy:lab": "vite build --mode lab && ./deploy.sh app lab"
   },
   "dependencies": {
-    "preact": "^10.25.0",
-    "@preact/signals": "^2.0.0"
+    "@jsquash/jpeg": "^1.6.0",
+    "@preact/signals": "^2.0.0",
+    "preact": "^10.25.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.0",
