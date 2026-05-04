@@ -10,3 +10,5 @@ dist/
 
 # Working spec, kept locally — not part of the public repo
 PROJECT.md
+.env.example
+deploy.sh
