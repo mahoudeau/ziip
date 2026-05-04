@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.local
+.vite/
+.DS_Store
+*.log
+
+# Working spec, kept locally — not part of the public repo
+PROJECT.md

@@ -1,0 +1,29 @@
+{
+  "name": "ziip",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Local, browser-only image compression. All compression runs locally via WebAssembly. No backend, no uploads.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:lab": "vite build --mode lab",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "deploy:lab": "vite build --mode lab && ./deploy.sh app lab"
+  },
+  "dependencies": {
+    "preact": "^10.25.0",
+    "@preact/signals": "^2.0.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
