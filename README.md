@@ -31,10 +31,10 @@ Requires Node 20+.
 
 ## Deploy
 
-- **Production** (`ziip.mathieu.dev`): auto-deploys from `main` via
-  Cloudflare Pages.
-- **Lab** (`lab.mathieu.dev/ziip`): `npm run deploy:lab` (requires a `.env`
-  with FTP credentials — see `.env.example`).
+Production (`ziip.mathieu.dev`) auto-deploys from `main` via Cloudflare
+Pages — no manual step required. To host your own copy, point any static
+host (Cloudflare Pages, Netlify, GitHub Pages, plain nginx) at the
+`dist/` output of `npm run build`.
 
 ## License
 
