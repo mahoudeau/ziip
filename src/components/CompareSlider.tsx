@@ -5,7 +5,6 @@ import { Spinner } from './ui/Spinner';
 interface Props {
   originalUrl: string;
   encodedUrl: string | null;
-  alt: string;
   /** True while a fresh encode is in flight; the visible "encoded" layer
    * is then a previous (stale) result and gets desaturated to flag that. */
   encoding?: boolean;
@@ -15,7 +14,7 @@ interface Props {
 
 const DIVIDER_HIT_WIDTH = 30;
 
-export function CompareSlider({ originalUrl, encodedUrl, alt, encoding, onViewerReady }: Props) {
+export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady }: Props) {
   const [pos, setPos] = useState(0.5);
   const containerRef = useRef<HTMLDivElement>(null);
   const fitRef = useRef<HTMLDivElement>(null);
@@ -167,7 +166,7 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, encoding, onViewer
         >
           <img
             src={showImage}
-            alt={alt}
+            alt=""
             onLoad={onImgLoad}
             class="block w-full h-full pointer-events-none"
             draggable={false}
@@ -183,7 +182,7 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, encoding, onViewer
           >
             <img
               src={originalUrl}
-              alt={alt}
+              alt=""
               class="block w-full h-full pointer-events-none"
               draggable={false}
             />

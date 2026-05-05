@@ -276,7 +276,6 @@ export function Editor() {
             <CompareSlider
               originalUrl={croppedOriginalUrl ?? originalUrl}
               encodedUrl={encodedUrl}
-              alt={filename}
               encoding={isEncoding}
               onViewerReady={(api) => { viewerApiRef.current = api; }}
             />
