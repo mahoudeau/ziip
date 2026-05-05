@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Local, browser-only image compression. All compression runs locally via WebAssembly. No backend, no uploads.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "vite",

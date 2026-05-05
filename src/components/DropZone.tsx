@@ -1,42 +1,49 @@
 import { useRef, useState } from 'preact/hooks';
 import { decodeImageFile } from '../lib/decode';
-import { loadImage } from '../state/images';
+import { addImage } from '../state/images';
+import { scheduleEncodeImage } from '../state/encode';
 
 export function DropZone() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleFile(file: File) {
+  async function handleFiles(files: FileList | File[]) {
     setError(null);
-    if (!file.type.startsWith('image/')) {
-      setError(`"${file.name}" is not an image (${file.type || 'unknown type'}).`);
-      return;
-    }
-    try {
-      const imageData = await decodeImageFile(file);
-      loadImage({
-        filename: file.name,
-        originalBytes: file.size,
-        originalImageData: imageData,
-        originalBlob: file,
-      });
-    } catch (err) {
-      setError(`Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`);
-    }
+    let firstError: string | null = null;
+    await Promise.all(
+      Array.from(files).map(async (file) => {
+        if (!file.type.startsWith('image/')) {
+          firstError ??= `"${file.name}" is not an image (${file.type || 'unknown type'}).`;
+          return;
+        }
+        try {
+          const imageData = await decodeImageFile(file);
+          const item = addImage({
+            filename: file.name,
+            originalBytes: file.size,
+            originalImageData: imageData,
+            originalBlob: file,
+          });
+          scheduleEncodeImage(item.id);
+        } catch (err) {
+          firstError ??= `Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`;
+        }
+      }),
+    );
+    if (firstError) setError(firstError);
   }
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer?.files[0];
-    if (file) void handleFile(file);
+    if (e.dataTransfer?.files.length) void handleFiles(e.dataTransfer.files);
   }
 
   function onChange(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) void handleFile(file);
+    if (input.files?.length) void handleFiles(input.files);
+    input.value = '';
   }
 
   return (
@@ -56,25 +63,24 @@ export function DropZone() {
       >
         <h1 class="text-6xl font-bold tracking-tight mb-3">Ziip</h1>
         <p class="text-zinc-400 mb-8 max-w-sm mx-auto">
-          Drop an image to compress it. Files never leave your device.
+          Drop images to compress them. Files never leave your device.
         </p>
         <button
           class="px-6 py-3 bg-zinc-100 text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors"
           onClick={() => fileInputRef.current?.click()}
         >
-          Choose file
+          Choose files
         </button>
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           class="hidden"
           onChange={onChange}
         />
       </div>
-      {error && (
-        <p class="mt-6 text-sm text-red-400 max-w-md text-center">{error}</p>
-      )}
+      {error && <p class="mt-6 text-sm text-red-400 max-w-md text-center">{error}</p>}
     </div>
   );
 }
