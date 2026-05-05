@@ -2,9 +2,11 @@ import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import tailwindcss from '@tailwindcss/vite';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig(({ mode }) => ({
   base: mode === 'lab' ? '/ziip/' : '/',
-  plugins: [preact(), tailwindcss()],
+  plugins: [preact(), tailwindcss(), cloudflare()],
   // jsquash codecs resolve their .wasm via import.meta.url. Vite's dep
   // prebundling rewrites that URL incorrectly, so the dev server returns
   // index.html (HTML) where the codec expects bytes (Wasm). Add each new
