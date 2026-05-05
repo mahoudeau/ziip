@@ -259,25 +259,27 @@ export function Editor() {
         </button>
       </header>
 
-      <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto">
-        {cropMode ? (
-          <CropTool
-            imageUrl={originalUrl}
-            sourceWidth={originalImageData.width}
-            sourceHeight={originalImageData.height}
-            rect={liveCropRect}
-            aspectRatio={aspectRatio}
-            onRectChange={setLiveCropRect}
-            onViewerReady={(api) => { viewerApiRef.current = api; }}
-          />
-        ) : (
-          <CompareSlider
-            originalUrl={croppedOriginalUrl ?? originalUrl}
-            encodedUrl={encodedUrl}
-            alt={filename}
-            onViewerReady={(api) => { viewerApiRef.current = api; }}
-          />
-        )}
+      <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto items-start">
+        <div class="h-[70vh] min-h-[400px]">
+          {cropMode ? (
+            <CropTool
+              imageUrl={originalUrl}
+              sourceWidth={originalImageData.width}
+              sourceHeight={originalImageData.height}
+              rect={liveCropRect}
+              aspectRatio={aspectRatio}
+              onRectChange={setLiveCropRect}
+              onViewerReady={(api) => { viewerApiRef.current = api; }}
+            />
+          ) : (
+            <CompareSlider
+              originalUrl={croppedOriginalUrl ?? originalUrl}
+              encodedUrl={encodedUrl}
+              alt={filename}
+              onViewerReady={(api) => { viewerApiRef.current = api; }}
+            />
+          )}
+        </div>
 
         <aside class="bg-zinc-900 rounded-xl p-6 space-y-6 self-start">
           <div>

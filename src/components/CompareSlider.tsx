@@ -125,7 +125,7 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: P
   return (
     <div
       ref={containerRef}
-      class="relative w-full bg-zinc-900 rounded-xl overflow-hidden select-none touch-none flex items-center justify-center min-h-[400px]"
+      class="relative w-full h-full bg-zinc-900 rounded-xl overflow-hidden select-none touch-none flex items-center justify-center"
       style={`cursor: ${containerCursor}`}
       onPointerDown={onContainerDown}
       onPointerMove={onContainerMove}
