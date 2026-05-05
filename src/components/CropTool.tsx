@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { CropRect } from '../lib/crop';
-import { clampRect, normalizeRect } from '../lib/crop';
+import type { CropRect, HandleId } from '../lib/crop';
+import { applyResize, clampRect, constrainCreate, normalizeRect } from '../lib/crop';
 
 const HANDLE_SCREEN_PX = 12;
 const STROKE_SCREEN_PX = 1.5;
 
-type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
-const HANDLES: ReadonlyArray<HandleId> = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const CORNER_HANDLES: ReadonlyArray<HandleId> = ['nw', 'ne', 'se', 'sw'];
+const EDGE_HANDLES: ReadonlyArray<HandleId> = ['n', 'e', 's', 'w'];
 
 const HANDLE_CURSOR: Record<HandleId, string> = {
   nw: 'nwse-resize',
@@ -33,10 +33,19 @@ interface Props {
   sourceWidth: number;
   sourceHeight: number;
   rect: CropRect | null;
+  /** Active aspect ratio (W/H), or null for free. */
+  aspectRatio: number | null;
   onRectChange: (rect: CropRect | null) => void;
 }
 
-export function CropTool({ imageUrl, sourceWidth, sourceHeight, rect, onRectChange }: Props) {
+export function CropTool({
+  imageUrl,
+  sourceWidth,
+  sourceHeight,
+  rect,
+  aspectRatio,
+  onRectChange,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [scale, setScale] = useState(1);
@@ -129,7 +138,13 @@ export function CropTool({ imageUrl, sourceWidth, sourceHeight, rect, onRectChan
 
     let next: CropRect;
     if (drag.mode === 'create') {
-      next = { x: drag.startRect.x, y: drag.startRect.y, width: dx, height: dy };
+      // Active ratio (or shift-pressed → 1:1) constrains the new rect.
+      const ratio = aspectRatio ?? (e.shiftKey ? 1 : null);
+      if (ratio != null && (Math.abs(dx) > 0 || Math.abs(dy) > 0)) {
+        next = constrainCreate({ x: drag.startRect.x, y: drag.startRect.y }, dx, dy, ratio);
+      } else {
+        next = { x: drag.startRect.x, y: drag.startRect.y, width: dx, height: dy };
+      }
     } else if (drag.mode === 'move') {
       next = {
         x: drag.startRect.x + dx,
@@ -138,7 +153,11 @@ export function CropTool({ imageUrl, sourceWidth, sourceHeight, rect, onRectChan
         height: drag.startRect.height,
       };
     } else {
-      next = applyResize(drag.startRect, drag.handle!, dx, dy);
+      next = applyResize(drag.startRect, drag.handle!, dx, dy, {
+        aspectRatio,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+      });
     }
     commit(next);
   }
@@ -154,6 +173,9 @@ export function CropTool({ imageUrl, sourceWidth, sourceHeight, rect, onRectChan
 
   const handleSizeSrc = HANDLE_SCREEN_PX / scale;
   const strokeSrc = STROKE_SCREEN_PX / scale;
+  // When a non-free aspect ratio is active, edge handles are disabled per
+  // PROJECT.md §7.4 — they would violate the ratio.
+  const showEdgeHandles = aspectRatio == null;
 
   return (
     <div ref={containerRef} class="relative w-full bg-zinc-900 rounded-xl overflow-hidden flex items-center justify-center min-h-[400px]">
@@ -204,7 +226,24 @@ export function CropTool({ imageUrl, sourceWidth, sourceHeight, rect, onRectChan
               style="cursor: move"
               onPointerDown={onPointerDownRect}
             />
-            {HANDLES.map((h) => {
+            {CORNER_HANDLES.map((h) => {
+              const pos = handlePos(h, rect);
+              return (
+                <rect
+                  key={h}
+                  x={pos.x - handleSizeSrc / 2}
+                  y={pos.y - handleSizeSrc / 2}
+                  width={handleSizeSrc}
+                  height={handleSizeSrc}
+                  fill="white"
+                  stroke="rgba(0,0,0,0.6)"
+                  stroke-width={strokeSrc / 2}
+                  style={`cursor: ${HANDLE_CURSOR[h]}`}
+                  onPointerDown={(e) => onPointerDownHandle(h, e)}
+                />
+              );
+            })}
+            {showEdgeHandles && EDGE_HANDLES.map((h) => {
               const pos = handlePos(h, rect);
               return (
                 <rect
@@ -245,25 +284,4 @@ function handlePos(h: HandleId, r: CropRect): { x: number; y: number } {
     case 'sw': return { x: left, y: bottom };
     case 'w': return { x: left, y: cy };
   }
-}
-
-function applyResize(start: CropRect, handle: HandleId, dx: number, dy: number): CropRect {
-  let { x, y, width, height } = start;
-  const right = x + width;
-  const bottom = y + height;
-  if (handle.includes('w')) {
-    x = start.x + dx;
-    width = right - x;
-  }
-  if (handle.includes('e')) {
-    width = start.width + dx;
-  }
-  if (handle.includes('n')) {
-    y = start.y + dy;
-    height = bottom - y;
-  }
-  if (handle.includes('s')) {
-    height = start.height + dy;
-  }
-  return { x, y, width, height };
 }
