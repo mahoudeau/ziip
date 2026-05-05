@@ -1,10 +1,12 @@
 import { signal } from '@preact/signals';
+import type { CropRect } from '../lib/crop';
 
 export interface ImageItem {
   filename: string;
   originalBytes: number;
   originalImageData: ImageData;
   originalBlob: Blob;
+  crop?: CropRect;
 }
 
 export interface EncodedResult {
@@ -24,5 +26,12 @@ export function loadImage(item: ImageItem): void {
 
 export function clearImage(): void {
   currentImage.value = null;
+  encoded.value = null;
+}
+
+export function setCrop(crop: CropRect | undefined): void {
+  const img = currentImage.value;
+  if (!img) return;
+  currentImage.value = { ...img, crop };
   encoded.value = null;
 }
