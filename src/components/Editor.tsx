@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { Spinner } from './ui/Spinner';
-import { clearImage, currentImage, encoded, encoding, setCrop } from '../state/images';
+import { getImage, removeImage, selectImage, selectedImageId, setCrop } from '../state/images';
+import { codec, options, setCodec, setOptions } from '../state/settings';
 import { CODECS } from '../codecs/registry';
-import type { CodecId } from '../codecs/types';
-import { getCompressPool } from '../workers/pool';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
 import { CompareSlider } from './CompareSlider';
@@ -11,23 +9,26 @@ import { CropTool } from './CropTool';
 import type { CropRect } from '../lib/crop';
 import { ASPECT_RATIOS, clampRect, cropImageData, normalizeRect } from '../lib/crop';
 import { formatBytes, formatDeltaPct } from '../lib/format';
-
-const DEBOUNCE_MS = 250;
+import { triggerBlobDownload } from '../lib/download';
+import { scheduleEncodeImage } from '../state/encode';
+import { Spinner } from './ui/Spinner';
 
 export function Editor() {
-  const img = currentImage.value;
-  if (!img) return null;
-  const { filename, originalImageData, originalBytes, originalBlob, crop } = img;
+  const selectedId = selectedImageId.value;
+  const item = getImage(selectedId);
+  if (!item) return null;
+  const { id, filename, originalImageData, originalBytes, originalBlob, crop, status, encoded } = item;
 
-  const [codec, setCodec] = useState<CodecId>('mozjpeg');
-  const [options, setOptions] = useState<Record<string, unknown>>(CODECS.mozjpeg.defaults);
+  const codecId = codec.value;
+  const opts = options.value;
+  const meta = CODECS[codecId];
+
   const [cropMode, setCropMode] = useState(false);
   const [liveCropRect, setLiveCropRect] = useState<CropRect | null>(null);
   const [aspectId, setAspectId] = useState<string>('free');
   const [customW, setCustomW] = useState(16);
   const [customH, setCustomH] = useState(9);
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
-  const meta = CODECS[codec];
 
   const aspectRatio = useMemo<number | null>(() => {
     if (aspectId === 'custom') {
@@ -37,10 +38,6 @@ export function Editor() {
     }
     return ASPECT_RATIOS.find((a) => a.id === aspectId)?.ratio ?? null;
   }, [aspectId, customW, customH]);
-
-  useEffect(() => {
-    setOptions(CODECS[codec].defaults);
-  }, [codec]);
 
   const [originalUrl] = useState(() => URL.createObjectURL(originalBlob));
   useEffect(() => () => URL.revokeObjectURL(originalUrl), [originalUrl]);
@@ -72,55 +69,25 @@ export function Editor() {
     };
   }, [effectiveImageData, crop]);
 
-  const enc = encoded.value;
   const [encodedUrl, setEncodedUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!enc) {
+    if (!encoded) {
       setEncodedUrl(null);
       return;
     }
-    const url = URL.createObjectURL(enc.blob);
+    const url = URL.createObjectURL(encoded.blob);
     setEncodedUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [enc]);
+  }, [encoded]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const handle = window.setTimeout(async () => {
-      encoding.value = true;
-      try {
-        const pool = getCompressPool();
-        const { buffer, msElapsed } = await pool.enqueue(codec, options, effectiveImageData);
-        if (cancelled) return;
-        const blob = new Blob([buffer], { type: CODECS[codec].outputMime });
-        encoded.value = { bytes: blob.size, blob, msElapsed };
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Encode failed', err);
-          encoded.value = null;
-        }
-      } finally {
-        if (!cancelled) encoding.value = false;
-      }
-    }, DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(handle);
-    };
-  }, [codec, options, effectiveImageData]);
-
-  const isEncoding = encoding.value;
+  const isEncoding = status === 'encoding' || status === 'queued';
 
   function downloadEncoded() {
-    if (!enc) return;
-    const url = URL.createObjectURL(enc.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = swapExt(filename, meta.outputExt);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    if (!encoded) return;
+    const ext = CODECS[encoded.codec].outputExt;
+    const dot = filename.lastIndexOf('.');
+    const base = dot === -1 ? filename : filename.slice(0, dot);
+    triggerBlobDownload(encoded.blob, `${base}.${ext}`);
   }
 
   function enterCropMode() {
@@ -130,20 +97,52 @@ export function Editor() {
 
   function applyLiveCrop() {
     if (liveCropRect && liveCropRect.width >= 1 && liveCropRect.height >= 1) {
-      setCrop(normalizeRect(liveCropRect));
+      setCrop(id, normalizeRect(liveCropRect));
     } else {
-      setCrop(undefined);
+      setCrop(id, undefined);
     }
+    scheduleEncodeImage(id);
     setCropMode(false);
   }
 
   function clearAppliedCrop() {
-    setCrop(undefined);
+    setCrop(id, undefined);
+    scheduleEncodeImage(id);
     setCropMode(false);
   }
 
-  // Keyboard shortcuts: C (toggle), Esc (cancel), Enter (apply), R (reset),
-  // arrow keys (nudge rect by 1 px / 10 px with Shift).
+  function backToQueue() {
+    selectImage(null);
+  }
+
+  function removeAndBack() {
+    removeImage(id);
+  }
+
+  // When the active aspect ratio changes, snap the live rect to it.
+  useEffect(() => {
+    if (aspectRatio == null) return;
+    setLiveCropRect((prev) => {
+      if (!prev || prev.width < 1 || prev.height < 1) return prev;
+      const cx = prev.x + prev.width / 2;
+      const cy = prev.y + prev.height / 2;
+      const area = prev.width * prev.height;
+      const newH = Math.sqrt(area / aspectRatio);
+      const newW = newH * aspectRatio;
+      return clampRect(
+        normalizeRect({
+          x: cx - newW / 2,
+          y: cy - newH / 2,
+          width: newW,
+          height: newH,
+        }),
+        originalImageData.width,
+        originalImageData.height,
+      );
+    });
+  }, [aspectRatio, originalImageData.width, originalImageData.height]);
+
+  // Keyboard shortcuts.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const target = e.target;
@@ -168,8 +167,6 @@ export function Editor() {
         e.preventDefault();
         return;
       }
-      // 0 / 1 zoom shortcuts work in both views — viewerApiRef points to
-      // whichever component (CropTool or CompareSlider) is currently mounted.
       if (e.key === '0') {
         viewerApiRef.current?.fit();
         e.preventDefault();
@@ -210,32 +207,7 @@ export function Editor() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [cropMode, liveCropRect, originalImageData.width, originalImageData.height, crop]);
-
-  // When the active aspect ratio changes, snap the live rect to it.
-  // Area-preserving + centered on the rect's current center, so the
-  // user's framing stays roughly intact when switching ratios.
-  useEffect(() => {
-    if (aspectRatio == null) return;
-    setLiveCropRect((prev) => {
-      if (!prev || prev.width < 1 || prev.height < 1) return prev;
-      const cx = prev.x + prev.width / 2;
-      const cy = prev.y + prev.height / 2;
-      const area = prev.width * prev.height;
-      const newH = Math.sqrt(area / aspectRatio);
-      const newW = newH * aspectRatio;
-      return clampRect(
-        normalizeRect({
-          x: cx - newW / 2,
-          y: cy - newH / 2,
-          width: newW,
-          height: newH,
-        }),
-        originalImageData.width,
-        originalImageData.height,
-      );
-    });
-  }, [aspectRatio, originalImageData.width, originalImageData.height]);
+  }, [cropMode, liveCropRect, originalImageData.width, originalImageData.height, crop, id]);
 
   function updateRectField(patch: Partial<CropRect>) {
     if (!liveCropRect) return;
@@ -249,14 +221,19 @@ export function Editor() {
   }
 
   return (
-    <div class="min-h-screen bg-zinc-950 text-zinc-100 p-6 lg:p-8">
-      <header class="flex items-center justify-between mb-8 max-w-7xl mx-auto">
-        <h1 class="text-3xl font-bold tracking-tight">Ziip</h1>
+    <div class="px-6 lg:px-8 pt-2 pb-6">
+      <header class="flex items-center justify-between mb-6 max-w-7xl mx-auto">
         <button
-          class="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
-          onClick={clearImage}
+          class="flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+          onClick={backToQueue}
         >
-          ← Drop another image
+          ← Back to queue
+        </button>
+        <button
+          class="px-3 py-2 text-sm text-zinc-500 hover:text-red-400 transition-colors"
+          onClick={removeAndBack}
+        >
+          Remove from queue
         </button>
       </header>
 
@@ -319,31 +296,31 @@ export function Editor() {
             </button>
           )}
 
-          <CodecPicker value={codec} onChange={setCodec} />
+          <CodecPicker value={codecId} onChange={setCodec} />
 
-          <CodecOptionsPanel meta={meta} values={options} onChange={setOptions} />
+          <CodecOptionsPanel meta={meta} values={opts} onChange={setOptions} />
 
           <dl class="text-sm space-y-1.5 pt-2 border-t border-zinc-800">
             <Row label="Original" value={formatBytes(originalBytes)} />
             <Row
               label="Encoded"
-              value={enc ? formatBytes(enc.bytes) : '—'}
+              value={encoded ? formatBytes(encoded.bytes) : '—'}
               pending={isEncoding}
             />
             <Row
               label="Change"
-              value={enc ? formatDeltaPct(originalBytes, enc.bytes) : '—'}
+              value={encoded ? formatDeltaPct(originalBytes, encoded.bytes) : '—'}
               stale={isEncoding}
             />
             <Row
               label="Encode time"
-              value={enc ? `${enc.msElapsed.toFixed(0)} ms` : '—'}
+              value={encoded ? `${encoded.msElapsed.toFixed(0)} ms` : '—'}
               stale={isEncoding}
             />
           </dl>
 
           <button
-            disabled={!enc || isEncoding}
+            disabled={!encoded || isEncoding}
             onClick={downloadEncoded}
             class="w-full px-4 py-3 bg-zinc-100 text-zinc-900 rounded-lg font-medium hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -541,9 +518,4 @@ function Row({
       </dd>
     </div>
   );
-}
-
-function swapExt(filename: string, newExt: string): string {
-  const dot = filename.lastIndexOf('.');
-  return dot === -1 ? `${filename}.${newExt}` : `${filename.slice(0, dot)}.${newExt}`;
 }
