@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { Spinner } from './ui/Spinner';
 import { clearImage, currentImage, encoded, encoding, setCrop } from '../state/images';
 import { CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
@@ -260,7 +261,7 @@ export function Editor() {
       </header>
 
       <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto items-start">
-        <div class="h-[70vh] min-h-[400px]">
+        <div class="h-[70vh] min-h-[400px] relative">
           {cropMode ? (
             <CropTool
               imageUrl={originalUrl}
@@ -276,6 +277,7 @@ export function Editor() {
               originalUrl={croppedOriginalUrl ?? originalUrl}
               encodedUrl={encodedUrl}
               alt={filename}
+              encoding={isEncoding}
               onViewerReady={(api) => { viewerApiRef.current = api; }}
             />
           )}
@@ -324,9 +326,21 @@ export function Editor() {
 
           <dl class="text-sm space-y-1.5 pt-2 border-t border-zinc-800">
             <Row label="Original" value={formatBytes(originalBytes)} />
-            <Row label="Encoded" value={isEncoding ? '…' : enc ? formatBytes(enc.bytes) : '—'} />
-            <Row label="Change" value={enc ? formatDeltaPct(originalBytes, enc.bytes) : '—'} />
-            <Row label="Encode time" value={enc ? `${enc.msElapsed.toFixed(0)} ms` : '—'} />
+            <Row
+              label="Encoded"
+              value={enc ? formatBytes(enc.bytes) : '—'}
+              pending={isEncoding}
+            />
+            <Row
+              label="Change"
+              value={enc ? formatDeltaPct(originalBytes, enc.bytes) : '—'}
+              stale={isEncoding}
+            />
+            <Row
+              label="Encode time"
+              value={enc ? `${enc.msElapsed.toFixed(0)} ms` : '—'}
+              stale={isEncoding}
+            />
           </dl>
 
           <button
@@ -508,11 +522,24 @@ function NudgeInput({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  pending,
+  stale,
+}: {
+  label: string;
+  value: string;
+  pending?: boolean;
+  stale?: boolean;
+}) {
   return (
     <div class="flex justify-between">
       <dt class="text-zinc-400">{label}</dt>
-      <dd class="tabular-nums">{value}</dd>
+      <dd class={`tabular-nums flex items-center gap-1.5 ${stale ? 'opacity-40' : ''}`}>
+        {pending && <Spinner size={12} />}
+        <span>{pending ? 'encoding…' : value}</span>
+      </dd>
     </div>
   );
 }

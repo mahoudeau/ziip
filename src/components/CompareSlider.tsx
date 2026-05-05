@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useViewer } from '../lib/viewer';
+import { Spinner } from './ui/Spinner';
 
 interface Props {
   originalUrl: string;
   encodedUrl: string | null;
   alt: string;
+  /** True while a fresh encode is in flight; the visible "encoded" layer
+   * is then a previous (stale) result and gets desaturated to flag that. */
+  encoding?: boolean;
   /** Receives the viewer API so the parent can wire `0` / `1` shortcuts. */
   onViewerReady?: (api: { fit: () => void; zoom100: () => void }) => void;
 }
 
 const DIVIDER_HIT_WIDTH = 30;
 
-export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: Props) {
+export function CompareSlider({ originalUrl, encodedUrl, alt, encoding, onViewerReady }: Props) {
   const [pos, setPos] = useState(0.5);
   const containerRef = useRef<HTMLDivElement>(null);
   const fitRef = useRef<HTMLDivElement>(null);
@@ -122,6 +126,23 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: P
   const zoomPct = naturalDims ? Math.round((fitDims.w / naturalDims.w) * viewer.state.scale * 100) : null;
   const isReset = viewer.state.scale === 1 && viewer.state.tx === 0 && viewer.state.ty === 0;
 
+  // Pill is centered in the visible right portion (between divider and fit
+  // wrapper's right edge), and vertically centered in the container.
+  const dividerScreenX = pos * containerSize.w;
+  const fitRightEdgeX = (containerSize.w + fitDims.w) / 2;
+  const pillLeft = (Math.min(dividerScreenX, fitRightEdgeX) + fitRightEdgeX) / 2;
+
+  const [encodingElapsed, setEncodingElapsed] = useState(0);
+  useEffect(() => {
+    if (!encoding) {
+      setEncodingElapsed(0);
+      return;
+    }
+    const start = performance.now();
+    const id = window.setInterval(() => setEncodingElapsed(performance.now() - start), 100);
+    return () => window.clearInterval(id);
+  }, [encoding]);
+
   return (
     <div
       ref={containerRef}
@@ -168,6 +189,12 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: P
             />
           </div>
         </div>
+        {/* Encoding indicator: desaturates only the right (encoded) portion
+            via backdrop-filter so the original on the left stays vivid. */}
+        <div
+          class="absolute top-0 bottom-0 right-0 pointer-events-none transition-opacity duration-200 backdrop-grayscale backdrop-brightness-75"
+          style={`left: ${dividerInFit}px; opacity: ${encoding ? 1 : 0};`}
+        />
       </div>
 
       {/* Divider hit zone — wide, transparent, captures the divider drag */}
@@ -195,6 +222,20 @@ export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: P
       </div>
 
       <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-zinc-100 rounded pointer-events-none">Original</div>
+
+      {/* Encoding pill — vertically centered, horizontally between the
+          divider and the right edge of the image. */}
+      {encoding && fitDims.w > 0 && (
+        <div
+          class="absolute flex items-center gap-2 px-3 py-1.5 bg-black/75 text-zinc-100 text-xs rounded-full pointer-events-none backdrop-blur-sm shadow-lg whitespace-nowrap"
+          style={`left: ${pillLeft}px; top: 50%; transform: translate(-50%, -50%);`}
+        >
+          <Spinner size={12} />
+          <span>
+            Encoding{encodingElapsed >= 500 ? ` · ${(encodingElapsed / 1000).toFixed(1)}s` : '…'}
+          </span>
+        </div>
+      )}
 
       {/* Zoom indicator + fit / 100% controls. stopPropagation so the container's
           pan-on-pointerdown doesn't swallow the button click. */}
