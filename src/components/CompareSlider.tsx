@@ -167,7 +167,6 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
           <img
             src={showImage}
             alt=""
-            onLoad={onImgLoad}
             class="block w-full h-full pointer-events-none"
             draggable={false}
           />
@@ -183,6 +182,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
             <img
               src={originalUrl}
               alt=""
+              onLoad={onImgLoad}
               class="block w-full h-full pointer-events-none"
               draggable={false}
             />
