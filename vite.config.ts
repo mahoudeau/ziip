@@ -10,6 +10,19 @@ export default defineConfig(({ mode }) => ({
   // index.html (HTML) where the codec expects bytes (Wasm). Add each new
   // jsquash package here as we wire it up in later phases.
   optimizeDeps: {
-    exclude: ['@jsquash/jpeg'],
+    exclude: [
+      '@jsquash/jpeg',
+      '@jsquash/webp',
+      '@jsquash/avif',
+      '@jsquash/jxl',
+      '@jsquash/oxipng',
+      '@jsquash/png',
+    ],
+  },
+  // The compress worker uses dynamic imports to lazy-load codec modules
+  // (one chunk per codec). That requires ES module format; Vite's default
+  // IIFE doesn't support code-splitting in workers.
+  worker: {
+    format: 'es',
   },
 }));
