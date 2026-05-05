@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { clearImage, currentImage, encoded, encoding, setCrop } from '../state/images';
 import { CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
@@ -25,6 +25,7 @@ export function Editor() {
   const [aspectId, setAspectId] = useState<string>('free');
   const [customW, setCustomW] = useState(16);
   const [customH, setCustomH] = useState(9);
+  const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
   const meta = CODECS[codec];
 
   const aspectRatio = useMemo<number | null>(() => {
@@ -166,6 +167,18 @@ export function Editor() {
         e.preventDefault();
         return;
       }
+      // 0 / 1 zoom shortcuts work in both views — viewerApiRef points to
+      // whichever component (CropTool or CompareSlider) is currently mounted.
+      if (e.key === '0') {
+        viewerApiRef.current?.fit();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === '1') {
+        viewerApiRef.current?.zoom100();
+        e.preventDefault();
+        return;
+      }
       if (!cropMode) return;
       if (e.key === 'Escape') {
         setCropMode(false);
@@ -255,12 +268,14 @@ export function Editor() {
             rect={liveCropRect}
             aspectRatio={aspectRatio}
             onRectChange={setLiveCropRect}
+            onViewerReady={(api) => { viewerApiRef.current = api; }}
           />
         ) : (
           <CompareSlider
             originalUrl={croppedOriginalUrl ?? originalUrl}
             encodedUrl={encodedUrl}
             alt={filename}
+            onViewerReady={(api) => { viewerApiRef.current = api; }}
           />
         )}
 
@@ -426,7 +441,7 @@ function CropControls({
       </div>
 
       <p class="text-xs text-zinc-500 pt-1 leading-relaxed">
-        Shift = preserve ratio · Alt = resize from center · Arrow keys nudge (Shift = 10 px)
+        Shift = preserve ratio · Alt = from center · Arrows nudge (Shift = 10 px) · Wheel = zoom · Space + drag = pan · 0 = fit · 1 = 100%
       </p>
     </div>
   );

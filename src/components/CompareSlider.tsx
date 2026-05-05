@@ -1,15 +1,59 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useViewer } from '../lib/viewer';
 
 interface Props {
   originalUrl: string;
   encodedUrl: string | null;
   alt: string;
+  /** Receives the viewer API so the parent can wire `0` / `1` shortcuts. */
+  onViewerReady?: (api: { fit: () => void; zoom100: () => void }) => void;
 }
 
-export function CompareSlider({ originalUrl, encodedUrl, alt }: Props) {
+const DIVIDER_HIT_WIDTH = 30;
+
+export function CompareSlider({ originalUrl, encodedUrl, alt, onViewerReady }: Props) {
   const [pos, setPos] = useState(0.5);
   const containerRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
+  const fitRef = useRef<HTMLDivElement>(null);
+  const dividerDragRef = useRef(false);
+
+  const [naturalDims, setNaturalDims] = useState<{ w: number; h: number } | null>(null);
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setContainerSize({ w: r.width, h: r.height });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const fitDims = useMemo(() => {
+    if (!naturalDims || containerSize.w === 0 || containerSize.h === 0) return { w: 0, h: 0 };
+    const baseScale = Math.min(containerSize.w / naturalDims.w, containerSize.h / naturalDims.h);
+    return { w: naturalDims.w * baseScale, h: naturalDims.h * baseScale };
+  }, [naturalDims, containerSize]);
+
+  const viewer = useViewer(containerRef, fitRef);
+
+  useEffect(() => {
+    if (!onViewerReady || !naturalDims) return;
+    onViewerReady({
+      fit: viewer.fit,
+      zoom100: () => viewer.zoom100(naturalDims.w, naturalDims.h),
+    });
+  }, [onViewerReady, naturalDims, viewer.fit, viewer.zoom100]);
+
+  const dividerInFit = useMemo(() => {
+    const dividerScreenX = pos * containerSize.w;
+    const fitOffsetX = (containerSize.w - fitDims.w) / 2;
+    return Math.max(0, Math.min(fitDims.w, dividerScreenX - fitOffsetX));
+  }, [pos, containerSize.w, fitDims.w]);
 
   function updateFromClientX(clientX: number) {
     const el = containerRef.current;
@@ -19,17 +63,34 @@ export function CompareSlider({ originalUrl, encodedUrl, alt }: Props) {
     setPos(Math.max(0, Math.min(1, ratio)));
   }
 
-  function onPointerDown(e: PointerEvent) {
-    draggingRef.current = true;
+  // Container handlers — pan is the default gesture.
+  function onContainerDown(e: PointerEvent) {
+    viewer.beginPan(e, { force: true });
+  }
+  function onContainerMove(e: PointerEvent) {
+    viewer.movePan(e);
+  }
+  function onContainerUp(e: PointerEvent) {
+    viewer.endPan(e);
+  }
+
+  // Divider hit zone handlers — only divider drag, not pan.
+  function onDividerDown(e: PointerEvent) {
+    // Holding space defers to pan: don't stop propagation, let it bubble.
+    if (viewer.spaceHeld) return;
+    e.stopPropagation();
+    dividerDragRef.current = true;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     updateFromClientX(e.clientX);
   }
-  function onPointerMove(e: PointerEvent) {
-    if (!draggingRef.current) return;
+  function onDividerMove(e: PointerEvent) {
+    if (!dividerDragRef.current) return;
+    e.stopPropagation();
     updateFromClientX(e.clientX);
   }
-  function onPointerUp(e: PointerEvent) {
-    draggingRef.current = false;
+  function onDividerUp(e: PointerEvent) {
+    if (!dividerDragRef.current) return;
+    dividerDragRef.current = false;
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   }
 
@@ -44,61 +105,123 @@ export function CompareSlider({ originalUrl, encodedUrl, alt }: Props) {
     }
   }
 
-  // Reset to centered when the encoded image changes — gives the user a
-  // natural fresh starting point after switching codecs or options.
   useEffect(() => {
     setPos(0.5);
   }, [encodedUrl]);
 
-  const pct = (pos * 100).toFixed(2);
+  function onImgLoad(e: Event) {
+    const img = e.currentTarget as HTMLImageElement;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      setNaturalDims({ w: img.naturalWidth, h: img.naturalHeight });
+    }
+  }
+
+  const transform = `translate(${viewer.state.tx}px, ${viewer.state.ty}px) scale(${viewer.state.scale})`;
+  const containerCursor = 'grab';
+  const showImage = encodedUrl ?? originalUrl;
+  const zoomPct = naturalDims ? Math.round((fitDims.w / naturalDims.w) * viewer.state.scale * 100) : null;
+  const isReset = viewer.state.scale === 1 && viewer.state.tx === 0 && viewer.state.ty === 0;
 
   return (
     <div
       ref={containerRef}
-      class="relative w-full bg-zinc-900 rounded-xl overflow-hidden select-none touch-none"
-      style="aspect-ratio: auto"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      class="relative w-full bg-zinc-900 rounded-xl overflow-hidden select-none touch-none flex items-center justify-center min-h-[400px]"
+      style={`cursor: ${containerCursor}`}
+      onPointerDown={onContainerDown}
+      onPointerMove={onContainerMove}
+      onPointerUp={onContainerUp}
+      onPointerCancel={onContainerUp}
       onKeyDown={onKeyDown}
       tabIndex={0}
-      aria-label="Compare slider — drag horizontally to reveal encoded image"
+      aria-label="Compare slider — click and drag to pan; drag the divider to compare"
     >
-      {/* Encoded image as the base layer */}
-      <img
-        src={encodedUrl ?? originalUrl}
-        alt={alt}
-        class="block w-full h-auto pointer-events-none"
-        draggable={false}
+      <div
+        ref={fitRef}
+        class="relative"
+        style={`width: ${fitDims.w}px; height: ${fitDims.h}px;`}
+      >
+        <div
+          class="absolute inset-0"
+          style={`transform: ${transform}; transform-origin: 0 0;`}
+        >
+          <img
+            src={showImage}
+            alt={alt}
+            onLoad={onImgLoad}
+            class="block w-full h-full pointer-events-none"
+            draggable={false}
+          />
+        </div>
+        <div
+          class="absolute top-0 left-0 bottom-0 overflow-hidden pointer-events-none"
+          style={`width: ${dividerInFit}px;`}
+        >
+          <div
+            class="absolute top-0 left-0"
+            style={`width: ${fitDims.w}px; height: ${fitDims.h}px; transform: ${transform}; transform-origin: 0 0;`}
+          >
+            <img
+              src={originalUrl}
+              alt={alt}
+              class="block w-full h-full pointer-events-none"
+              draggable={false}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Divider hit zone — wide, transparent, captures the divider drag */}
+      <div
+        class="absolute top-0 bottom-0"
+        style={`left: ${pos * 100}%; width: ${DIVIDER_HIT_WIDTH}px; transform: translateX(-50%); cursor: ${viewer.spaceHeld ? 'grab' : 'ew-resize'}`}
+        onPointerDown={onDividerDown}
+        onPointerMove={onDividerMove}
+        onPointerUp={onDividerUp}
+        onPointerCancel={onDividerUp}
       />
 
-      {/* Original on top, clipped from the right */}
-      <img
-        src={originalUrl}
-        alt={alt}
-        class="absolute inset-0 w-full h-auto pointer-events-none"
-        style={`clip-path: inset(0 ${100 - parseFloat(pct)}% 0 0)`}
-        draggable={false}
-      />
-
-      {/* Divider line + handle */}
+      {/* Visual divider line + handle (purely cosmetic) */}
       <div
         class="absolute top-0 bottom-0 w-px bg-zinc-100 pointer-events-none"
-        style={`left: ${pct}%`}
+        style={`left: ${pos * 100}%`}
       />
       <div
         class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-zinc-100 shadow-lg pointer-events-none flex items-center justify-center"
-        style={`left: ${pct}%`}
+        style={`left: ${pos * 100}%`}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" class="text-zinc-900">
           <path d="M2 7 L5 4 M2 7 L5 10 M12 7 L9 4 M12 7 L9 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
         </svg>
       </div>
 
-      {/* Labels */}
-      <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-zinc-100 rounded">Original</div>
-      <div class="absolute top-3 right-3 px-2 py-0.5 text-xs bg-black/60 text-zinc-100 rounded">Encoded</div>
+      <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-zinc-100 rounded pointer-events-none">Original</div>
+
+      {/* Zoom indicator + fit / 100% controls. stopPropagation so the container's
+          pan-on-pointerdown doesn't swallow the button click. */}
+      <div
+        class="absolute top-3 right-3 flex items-center gap-1 text-xs"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div class="px-2 py-1 bg-black/60 text-zinc-100 rounded tabular-nums pointer-events-none">
+          {zoomPct != null ? `${zoomPct}%` : '—'} · Encoded
+        </div>
+        <button
+          onClick={viewer.fit}
+          disabled={isReset}
+          title="Fit to screen (0)"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Fit
+        </button>
+        <button
+          onClick={() => naturalDims && viewer.zoom100(naturalDims.w, naturalDims.h)}
+          disabled={!naturalDims || (zoomPct != null && Math.abs(zoomPct - 100) < 1)}
+          title="Zoom 1:1 (1)"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          100%
+        </button>
+      </div>
     </div>
   );
 }
