@@ -1,8 +1,12 @@
 import DecodeWorker from '../workers/decode.worker?worker';
 
+type DecodeSource =
+  | { kind: 'file'; file: File }
+  | { kind: 'jxl'; bytes: ArrayBuffer };
+
 interface DecodeJob {
   id: number;
-  file: File;
+  source: DecodeSource;
 }
 
 type DecodeResult =
@@ -11,6 +15,7 @@ type DecodeResult =
 
 interface PendingJob {
   job: DecodeJob;
+  transfer: Transferable[];
   resolve: (data: ImageData) => void;
   reject: (err: Error) => void;
 }
@@ -20,8 +25,6 @@ interface WorkerSlot {
   busy: boolean;
 }
 
-// Decoding is mostly memory work (getImageData copies pixels). 2–4 workers
-// is plenty of parallelism; more would just contend for memory bandwidth.
 const POOL_SIZE = Math.min(4, Math.max(2, (navigator.hardwareConcurrency ?? 2) - 1));
 
 const slots: WorkerSlot[] = [];
@@ -61,16 +64,26 @@ function dispatch(): void {
     const pending = queue.shift()!;
     slot.busy = true;
     inflight.set(pending.job.id, pending);
-    slot.worker.postMessage(pending.job);
+    slot.worker.postMessage(pending.job, pending.transfer);
   }
 }
 
-export function decodeImageFile(file: File): Promise<ImageData> {
+function enqueueJob(source: DecodeSource, transfer: Transferable[]): Promise<ImageData> {
   ensurePool();
   return new Promise((resolve, reject) => {
     const id = nextJobId++;
-    const job: DecodeJob = { id, file };
-    queue.push({ job, resolve, reject });
+    const job: DecodeJob = { id, source };
+    queue.push({ job, transfer, resolve, reject });
     dispatch();
   });
+}
+
+export function decodeImageFile(file: File): Promise<ImageData> {
+  return enqueueJob({ kind: 'file', file }, []);
+}
+
+/** Decode JXL bytes (anywhere the browser can't do it natively — Chrome,
+ * Firefox). Caller transfers ownership of `bytes`. */
+export function decodeJxlBytes(bytes: ArrayBuffer): Promise<ImageData> {
+  return enqueueJob({ kind: 'jxl', bytes }, [bytes]);
 }

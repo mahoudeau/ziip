@@ -33,6 +33,8 @@ export function Queue() {
             originalBytes: file.size,
             originalImageData: imageData,
             originalBlob: file,
+            codec: codec.peek(),
+            options: { ...options.peek() },
           });
           scheduleEncodeImage(added.id);
         } catch (err) {

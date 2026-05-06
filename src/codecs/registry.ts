@@ -118,8 +118,11 @@ export const CODECS: Record<CodecId, CodecMeta> = {
     outputExt: 'jxl',
     outputMime: 'image/jxl',
     defaults: {
+      // Effort 7 was triggering Wasm aborts on larger photos — likely
+      // libjxl running out of memory on the higher-effort code paths.
+      // 4 keeps quality/size respectable without the memory cliff.
       quality: 75,
-      effort: 7,
+      effort: 4,
       lossless: false,
     },
     options: [
@@ -169,4 +172,4 @@ export const CODECS: Record<CodecId, CodecMeta> = {
   },
 };
 
-export const CODEC_IDS: ReadonlyArray<CodecId> = ['mozjpeg', 'webp', 'avif', 'jxl', 'oxipng'];
+export const CODEC_IDS: ReadonlyArray<CodecId> = ['webp', 'oxipng', 'avif', 'mozjpeg', 'jxl'];
