@@ -38,7 +38,7 @@ function isValidPreset(raw: unknown): raw is Preset {
 
 function normalize(raw: unknown): Preset | null {
   if (!isValidPreset(raw)) return null;
-  return {
+  const out: Preset = {
     id: raw.id,
     name: raw.name,
     codec: raw.codec,
@@ -50,6 +50,9 @@ function normalize(raw: unknown): Preset | null {
     bytesOut: typeof raw.bytesOut === 'number' ? raw.bytesOut : 0,
     bytesSaved: typeof raw.bytesSaved === 'number' ? raw.bytesSaved : 0,
   };
+  const wide = raw as PresetWire & { isDefault?: unknown };
+  if (wide.isDefault === true) out.isDefault = true;
+  return out;
 }
 
 export function loadStoredPresets(): Preset[] {

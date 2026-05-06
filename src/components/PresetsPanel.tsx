@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CODECS } from '../codecs/registry';
-import { deletePreset, presets, renamePreset } from '../state/presets';
+import { deletePreset, presets, renamePreset, setDefaultPreset } from '../state/presets';
 import { formatBytes } from '../lib/format';
 
 interface Props {
@@ -9,11 +9,20 @@ interface Props {
    * "apply to all images". */
   onApply: (presetId: string) => void;
   applyLabel: string;
+  /** The preset that's currently active in this context. The panel mounts
+   * with this preset pre-expanded so the user can see its details. */
+  activePresetId?: string;
+  /** The preset that has *already been applied* in this context. When the
+   * user clicks Apply on it, the action is a re-run rather than a fresh
+   * apply — we relabel and dim the button to make that clear. For Editor:
+   * the current image's presetId. For Queue: the preset whose id every
+   * image shares. */
+  appliedPresetId?: string;
 }
 
-export function PresetsPanel({ onApply, applyLabel }: Props) {
+export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPresetId }: Props) {
   const list = presets.value;
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(activePresetId ?? null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -66,9 +75,14 @@ export function PresetsPanel({ onApply, applyLabel }: Props) {
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : preset.id)}
-                  class="flex-1 min-w-0 text-left text-sm font-medium truncate"
+                  class="flex-1 min-w-0 text-left text-sm font-medium truncate flex items-center gap-1.5"
                 >
-                  {preset.name}
+                  {preset.isDefault && (
+                    <span class="text-amber-300 flex-shrink-0" title="Default for new images" aria-label="Default">
+                      ★
+                    </span>
+                  )}
+                  <span class="truncate">{preset.name}</span>
                 </button>
               )}
               <span class="text-[10px] font-medium uppercase tracking-wide rounded px-1.5 py-0.5 bg-zinc-800 text-zinc-300 flex-shrink-0">
@@ -109,6 +123,18 @@ export function PresetsPanel({ onApply, applyLabel }: Props) {
                     />
                   )}
                 </dl>
+
+                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={!!preset.isDefault}
+                    onChange={(e) =>
+                      setDefaultPreset((e.currentTarget as HTMLInputElement).checked ? preset.id : null)
+                    }
+                    class="accent-amber-300"
+                  />
+                  Default for newly added images
+                </label>
 
                 <div class="flex gap-2">
                   {renaming ? (
@@ -155,9 +181,14 @@ export function PresetsPanel({ onApply, applyLabel }: Props) {
                       <button
                         type="button"
                         onClick={() => onApply(preset.id)}
-                        class="flex-1 px-3 py-1.5 text-sm rounded bg-zinc-100 text-zinc-900 font-medium hover:bg-white transition-colors"
+                        class={`flex-1 px-3 py-1.5 text-sm rounded font-medium transition-colors ${
+                          appliedPresetId === preset.id
+                            ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                            : 'bg-zinc-100 text-zinc-900 hover:bg-white'
+                        }`}
+                        title={appliedPresetId === preset.id ? 'Re-encode using this preset' : undefined}
                       >
-                        {applyLabel}
+                        {appliedPresetId === preset.id ? 'Rerun' : applyLabel}
                       </button>
                       <KebabMenu
                         onRename={() => startRename(preset.id, preset.name)}

@@ -10,6 +10,10 @@ export interface Preset {
   name: string;
   codec: CodecId;
   options: Record<string, unknown>;
+  /** When true, newly added images get this preset's codec + options + a
+   * link via `presetId`. At most one preset can hold this flag at a time —
+   * the setter enforces uniqueness. */
+  isDefault?: boolean;
   createdAt: number;
   updatedAt: number;
   useCount: number;
@@ -87,6 +91,21 @@ export function overwritePreset(
       ? { ...p, codec, options: { ...options }, updatedAt: Date.now() }
       : p,
   );
+  scheduleSave();
+}
+
+export function getDefaultPreset(): Preset | null {
+  return presets.peek().find((p) => p.isDefault) ?? null;
+}
+
+/** Mark a preset as the default-for-new-images. Clears the flag from any
+ * other preset so only one is ever default. Pass `null` to clear. */
+export function setDefaultPreset(id: string | null): void {
+  presets.value = presets.value.map((p) => {
+    const shouldBe = p.id === id;
+    if (Boolean(p.isDefault) === shouldBe) return p;
+    return { ...p, isDefault: shouldBe || undefined, updatedAt: Date.now() };
+  });
   scheduleSave();
 }
 

@@ -49,7 +49,9 @@ export function Editor() {
   const [aspectId, setAspectId] = useState<string>('free');
   const [customW, setCustomW] = useState(16);
   const [customH, setCustomH] = useState(9);
-  const [showingPresets, setShowingPresets] = useState(false);
+  // If the image was added with a default preset (or had one applied),
+  // start the sidebar on the Presets tab so the link is immediately visible.
+  const [showingPresets, setShowingPresets] = useState(() => !!presetId);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
 
@@ -354,6 +356,8 @@ export function Editor() {
             <PresetsPanel
               onApply={(pid) => applyPresetToImage(pid, id)}
               applyLabel="Apply to this image"
+              activePresetId={presetId}
+              appliedPresetId={presetId}
             />
           ) : (
             <>

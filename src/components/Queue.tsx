@@ -9,14 +9,16 @@ import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
 import { PresetsPanel } from './PresetsPanel';
 import { PresetSaveModal } from './PresetSaveModal';
-import { applyPresetToAll } from '../state/presets';
+import { applyPresetToAll, getDefaultPreset } from '../state/presets';
 
 export function Queue() {
   const items = images.value;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showingPresets, setShowingPresets] = useState(false);
+  // Land on the Presets tab when a default preset is set, so the user sees
+  // straight away what's being applied to incoming images.
+  const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
   const [savePresetOpen, setSavePresetOpen] = useState(false);
   const meta = CODECS[codec.value];
 
@@ -33,13 +35,15 @@ export function Queue() {
         }
         try {
           const imageData = await decodeImageFile(file);
+          const def = getDefaultPreset();
           const added = addImage({
             filename: file.name,
             originalBytes: file.size,
             originalImageData: imageData,
             originalBlob: file,
-            codec: codec.peek(),
-            options: { ...options.peek() },
+            codec: def ? def.codec : codec.peek(),
+            options: def ? { ...def.options } : { ...options.peek() },
+            presetId: def?.id,
           });
           scheduleEncodeImage(added.id);
         } catch (err) {
@@ -120,6 +124,14 @@ export function Queue() {
             <PresetsPanel
               onApply={(pid) => applyPresetToAll(pid)}
               applyLabel="Apply to all images"
+              activePresetId={getDefaultPreset()?.id}
+              appliedPresetId={(() => {
+                const all = items;
+                if (all.length === 0) return undefined;
+                const first = all[0]?.presetId;
+                if (!first) return undefined;
+                return all.every((i) => i.presetId === first) ? first : undefined;
+              })()}
             />
           ) : (
             <>
