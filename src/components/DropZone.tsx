@@ -54,7 +54,7 @@ export function DropZone() {
 
   return (
     <div
-      class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-8"
+      class="flex-1 flex flex-col items-center justify-center p-8 min-h-[80vh]"
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);

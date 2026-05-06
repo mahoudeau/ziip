@@ -1,5 +1,6 @@
 import type { CodecId } from '../codecs/types';
 import type { Preset } from './presets';
+import type { GlobalStats } from './stats';
 
 const SCHEMA_VERSION = 1;
 const KEY_PREFIX = 'ziip.';
@@ -7,6 +8,7 @@ const KEY_PREFIX = 'ziip.';
 const KEY_SCHEMA = `${KEY_PREFIX}schemaVersion`;
 const KEY_PRESETS = `${KEY_PREFIX}presets`;
 const KEY_DRAFT = `${KEY_PREFIX}draft`;
+const KEY_STATS = `${KEY_PREFIX}stats`;
 
 interface PresetWire {
   id: unknown;
@@ -99,5 +101,26 @@ export function persistDraft(draft: Record<CodecId, Record<string, unknown>>): v
     localStorage.setItem(KEY_DRAFT, JSON.stringify(draft));
   } catch (err) {
     console.warn('Failed to persist draft', err);
+  }
+}
+
+export function loadStoredStats(): GlobalStats | null {
+  try {
+    const raw = localStorage.getItem(KEY_STATS);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as GlobalStats;
+  } catch (err) {
+    console.warn('Failed to load stats from localStorage', err);
+    return null;
+  }
+}
+
+export function persistStats(stats: GlobalStats): void {
+  try {
+    localStorage.setItem(KEY_STATS, JSON.stringify(stats));
+  } catch (err) {
+    console.warn('Failed to persist stats', err);
   }
 }

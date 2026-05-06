@@ -2,6 +2,7 @@ import { CODECS } from '../codecs/registry';
 import { cropImageData } from '../lib/crop';
 import { getCompressPool } from '../workers/pool';
 import { images, selectedImageId, updateImage } from './images';
+import { recordCompression } from './stats';
 
 const DEBOUNCE_MS = 250;
 
@@ -56,6 +57,7 @@ async function runEncodeImage(id: string): Promise<void> {
       encoded: { bytes: blob.size, blob, codec: codecId, msElapsed },
       error: undefined,
     });
+    recordCompression(codecId, img.originalBytes, blob.size);
     if (img.presetId) {
       // Lazy require to avoid an import cycle: presets.ts imports from
       // encode.ts, so we can't import presets at the top.
