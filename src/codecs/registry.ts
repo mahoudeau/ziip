@@ -169,4 +169,4 @@ export const CODECS: Record<CodecId, CodecMeta> = {
   },
 };
 
-export const CODEC_IDS: ReadonlyArray<CodecId> = ['mozjpeg', 'webp', 'avif', 'jxl', 'oxipng'];
+export const CODEC_IDS: ReadonlyArray<CodecId> = ['webp', 'oxipng', 'avif', 'mozjpeg', 'jxl'];

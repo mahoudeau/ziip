@@ -7,8 +7,8 @@ import { scheduleEncodeAll } from './encode';
 // "Default" settings: applied to every NEW image as it's added to the queue,
 // and reflected in the queue sidebar. The Editor mutates only the selected
 // image's settings — that doesn't touch these defaults.
-export const codec = signal<CodecId>('mozjpeg');
-export const options = signal<Record<string, unknown>>({ ...CODECS.mozjpeg.defaults });
+export const codec = signal<CodecId>('webp');
+export const options = signal<Record<string, unknown>>({ ...CODECS.webp.defaults });
 
 /** Queue-sidebar codec change: updates the default AND every image. */
 export function setCodec(next: CodecId): void {
