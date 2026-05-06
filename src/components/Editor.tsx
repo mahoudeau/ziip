@@ -18,6 +18,7 @@ import type { CropRect } from '../lib/crop';
 import { ASPECT_RATIOS, clampRect, cropImageData, normalizeRect } from '../lib/crop';
 import { formatBytes, formatDeltaPct } from '../lib/format';
 import { triggerBlobDownload } from '../lib/download';
+import { getRenderablePreviewUrl } from '../lib/preview';
 import { scheduleEncodeImage } from '../state/encode';
 import { Spinner } from './ui/Spinner';
 
@@ -91,9 +92,27 @@ export function Editor() {
       setEncodedUrl(null);
       return;
     }
-    const url = URL.createObjectURL(encoded.blob);
-    setEncodedUrl(url);
-    return () => URL.revokeObjectURL(url);
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    getRenderablePreviewUrl(encoded.blob, encoded.codec)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        createdUrl = url;
+        setEncodedUrl(url);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Failed to build preview URL', err);
+          setEncodedUrl(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
   }, [encoded]);
 
   const isEncoding = status === 'encoding' || status === 'queued';

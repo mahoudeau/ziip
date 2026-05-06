@@ -58,10 +58,20 @@ async function runEncodeImage(id: string): Promise<void> {
     });
   } catch (err) {
     if (generationByImage.get(id) !== gen) return;
+    console.error(`[encode ${codecId}] ${img.filename} ${img.originalImageData.width}×${img.originalImageData.height}`, err);
+    const raw = err instanceof Error ? err.message : String(err);
+    // Emscripten's "Aborted()" is a generic Wasm-hit-an-abort signal that's
+    // typically caused by image dimensions exceeding the encoder's limits,
+    // memory exhaustion, or an invalid option combination. Surface
+    // something more actionable in the UI.
+    const dims = `${img.originalImageData.width}×${img.originalImageData.height}`;
+    const friendly = /aborted\(\)?/i.test(raw)
+      ? `${CODECS[codecId].name} couldn't encode this image at ${dims}. Try lowering the effort/quality, picking another codec, or a smaller image.`
+      : raw;
     updateImage(id, {
       status: 'error',
       encoded: undefined,
-      error: err instanceof Error ? err.message : String(err),
+      error: friendly,
     });
   }
 }

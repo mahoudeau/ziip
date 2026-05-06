@@ -118,8 +118,11 @@ export const CODECS: Record<CodecId, CodecMeta> = {
     outputExt: 'jxl',
     outputMime: 'image/jxl',
     defaults: {
+      // Effort 7 was triggering Wasm aborts on larger photos — likely
+      // libjxl running out of memory on the higher-effort code paths.
+      // 4 keeps quality/size respectable without the memory cliff.
       quality: 75,
-      effort: 7,
+      effort: 4,
       lossless: false,
     },
     options: [
