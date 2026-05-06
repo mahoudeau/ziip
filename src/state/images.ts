@@ -24,6 +24,10 @@ export interface ImageItem {
   codec: CodecId;
   options: Record<string, unknown>;
   crop?: CropRect;
+  /** Set when codec/options came from a preset. Cleared on any manual edit
+   * to codec/options so we don't credit usage to a preset that no longer
+   * matches what was actually encoded. */
+  presetId?: string;
   status: ImageStatus;
   encoded?: EncodedResult;
   error?: string;
@@ -73,16 +77,18 @@ export function getImage(id: string | null): ImageItem | null {
 }
 
 /** Per-image codec change. Resets options to that codec's defaults so the
- * stale option keys (which differ between codecs) don't carry over. */
+ * stale option keys (which differ between codecs) don't carry over. Also
+ * clears presetId — manual edits invalidate the preset link. */
 export function setImageCodec(id: string, codec: CodecId): void {
   updateImage(id, {
     codec,
     options: { ...CODECS[codec].defaults },
+    presetId: undefined,
     encoded: undefined,
     status: 'queued',
   });
 }
 
 export function setImageOptions(id: string, options: Record<string, unknown>): void {
-  updateImage(id, { options, encoded: undefined, status: 'queued' });
+  updateImage(id, { options, presetId: undefined, encoded: undefined, status: 'queued' });
 }

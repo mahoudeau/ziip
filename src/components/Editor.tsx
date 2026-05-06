@@ -14,6 +14,9 @@ import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
 import { CompareSlider } from './CompareSlider';
 import { CropTool } from './CropTool';
+import { PresetsPanel } from './PresetsPanel';
+import { PresetSaveModal } from './PresetSaveModal';
+import { applyPresetToImage } from '../state/presets';
 import type { CropRect } from '../lib/crop';
 import { ASPECT_RATIOS, clampRect, cropImageData, normalizeRect } from '../lib/crop';
 import { formatBytes, formatDeltaPct } from '../lib/format';
@@ -37,6 +40,7 @@ export function Editor() {
     encoded,
     codec: codecId,
     options: opts,
+    presetId,
   } = item;
   const meta = CODECS[codecId];
 
@@ -45,6 +49,8 @@ export function Editor() {
   const [aspectId, setAspectId] = useState<string>('free');
   const [customW, setCustomW] = useState(16);
   const [customH, setCustomH] = useState(9);
+  const [showingPresets, setShowingPresets] = useState(false);
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
 
   const aspectRatio = useMemo<number | null>(() => {
@@ -272,7 +278,7 @@ export function Editor() {
         </button>
       </header>
 
-      <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto items-start">
+      <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div class="h-[70vh] min-h-[400px] relative">
           {cropMode ? (
             <CropTool
@@ -331,32 +337,65 @@ export function Editor() {
             </button>
           )}
 
-          <div class="space-y-2">
-            <CodecPicker
-              value={codecId}
-              onChange={(c) => {
+          <CodecPicker
+            value={codecId}
+            showingPresets={showingPresets}
+            onSelectCodec={(c) => {
+              setShowingPresets(false);
+              if (c !== codecId) {
                 setImageCodec(id, c);
                 scheduleEncodeImage(id);
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => applyToAll(codecId, opts)}
-              class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
-              title="Set every image in the queue to this image's codec + options"
-            >
-              Apply this format to all images
-            </button>
-          </div>
-
-          <CodecOptionsPanel
-            meta={meta}
-            values={opts}
-            onChange={(o) => {
-              setImageOptions(id, o);
-              scheduleEncodeImage(id);
+              }
             }}
+            onSelectPresets={() => setShowingPresets(true)}
           />
+
+          {showingPresets ? (
+            <PresetsPanel
+              onApply={(pid) => applyPresetToImage(pid, id)}
+              applyLabel="Apply to this image"
+            />
+          ) : (
+            <>
+              <CodecOptionsPanel
+                meta={meta}
+                values={opts}
+                onChange={(o) => {
+                  setImageOptions(id, o);
+                  scheduleEncodeImage(id);
+                }}
+              />
+              <div class="space-y-2 pt-1 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => applyToAll(codecId, opts)}
+                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                >
+                  Apply this format to all images
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSavePresetOpen(true)}
+                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                >
+                  Save current settings as preset…
+                </button>
+                {presetId && (
+                  <p class="text-xs text-amber-300/80 text-center">
+                    Settings come from a preset · changes will detach
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {savePresetOpen && (
+            <PresetSaveModal
+              codec={codecId}
+              options={opts}
+              onClose={() => setSavePresetOpen(false)}
+            />
+          )}
 
           <dl class="text-sm space-y-1.5 pt-2 border-t border-zinc-800">
             <Row label="Original" value={formatBytes(originalBytes)} />

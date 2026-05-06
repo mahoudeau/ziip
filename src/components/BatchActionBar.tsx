@@ -33,7 +33,7 @@ export function BatchActionBar() {
   }
 
   return (
-    <div class="border-t border-zinc-800 bg-zinc-950 px-6 py-3">
+    <div class="sticky bottom-0 z-20 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-sm px-6 py-3">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
         <div class="text-xs text-zinc-400 tabular-nums flex items-center gap-3 flex-wrap">
           <span>
@@ -48,7 +48,7 @@ export function BatchActionBar() {
             </span>
           )}
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <button
             onClick={downloadAll}
             disabled={doneItems.length === 0 || encoding || zipping}

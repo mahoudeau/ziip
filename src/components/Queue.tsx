@@ -7,12 +7,17 @@ import { CODECS } from '../codecs/registry';
 import { QueueItem } from './QueueItem';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
+import { PresetsPanel } from './PresetsPanel';
+import { PresetSaveModal } from './PresetSaveModal';
+import { applyPresetToAll } from '../state/presets';
 
 export function Queue() {
   const items = images.value;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showingPresets, setShowingPresets] = useState(false);
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
   const meta = CODECS[codec.value];
 
   async function handleFiles(files: FileList | File[]) {
@@ -67,7 +72,7 @@ export function Queue() {
       onDragLeave={() => setIsDragging(false)}
       onDrop={onDrop}
     >
-      <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto items-start">
+      <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">
@@ -101,8 +106,43 @@ export function Queue() {
             <p class="text-xs uppercase tracking-wide text-zinc-500 font-medium">Settings</p>
             <p class="text-xs text-zinc-400 mt-1">Apply to every image in the queue.</p>
           </div>
-          <CodecPicker value={codec.value} onChange={setCodec} />
-          <CodecOptionsPanel meta={meta} values={options.value} onChange={setOptions} />
+          <CodecPicker
+            value={codec.value}
+            showingPresets={showingPresets}
+            onSelectCodec={(c) => {
+              setShowingPresets(false);
+              if (c !== codec.value) setCodec(c);
+            }}
+            onSelectPresets={() => setShowingPresets(true)}
+          />
+
+          {showingPresets ? (
+            <PresetsPanel
+              onApply={(pid) => applyPresetToAll(pid)}
+              applyLabel="Apply to all images"
+            />
+          ) : (
+            <>
+              <CodecOptionsPanel meta={meta} values={options.value} onChange={setOptions} />
+              <div class="pt-1 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setSavePresetOpen(true)}
+                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                >
+                  Save current settings as preset…
+                </button>
+              </div>
+            </>
+          )}
+
+          {savePresetOpen && (
+            <PresetSaveModal
+              codec={codec.value}
+              options={options.value}
+              onClose={() => setSavePresetOpen(false)}
+            />
+          )}
         </aside>
       </div>
     </div>

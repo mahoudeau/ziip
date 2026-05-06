@@ -56,6 +56,12 @@ async function runEncodeImage(id: string): Promise<void> {
       encoded: { bytes: blob.size, blob, codec: codecId, msElapsed },
       error: undefined,
     });
+    if (img.presetId) {
+      // Lazy require to avoid an import cycle: presets.ts imports from
+      // encode.ts, so we can't import presets at the top.
+      const { recordPresetUse } = await import('./presets');
+      recordPresetUse(img.presetId, img.originalBytes, blob.size);
+    }
   } catch (err) {
     if (generationByImage.get(id) !== gen) return;
     console.error(`[encode ${codecId}] ${img.filename} ${img.originalImageData.width}×${img.originalImageData.height}`, err);
