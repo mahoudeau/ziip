@@ -1,19 +1,54 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { decodeImageFile } from '../lib/decode';
 import { addImage, images } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
-import { codec, options, setCodec, setOptions } from '../state/settings';
+import { applyToAll, codec, options } from '../state/settings';
+import {
+  pendingByCodec,
+  resetPendingOptions as resetDraftFor,
+  setPendingOptions as setDraftFor,
+} from '../state/draft';
 import { CODECS } from '../codecs/registry';
+import type { CodecId } from '../codecs/types';
 import { QueueItem } from './QueueItem';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
+import { PresetsPanel } from './PresetsPanel';
+import { PresetSaveModal } from './PresetSaveModal';
+import { ApplyButton } from './ui/ApplyButton';
+import { applyPresetToAll, getDefaultPreset } from '../state/presets';
 
 export function Queue() {
   const items = images.value;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const meta = CODECS[codec.value];
+  // Land on the Presets tab when a default preset is set, so the user sees
+  // straight away what's being applied to incoming images.
+  const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
+  const [savePresetOpen, setSavePresetOpen] = useState(false);
+
+  // Picker selection. Options come from the shared draft signal so they
+  // persist across page reloads and stay in sync between Queue + Editor.
+  const currentCodec = codec.value;
+  const currentOptions = options.value;
+  const [pendingCodec, setPendingCodec] = useState<CodecId>(currentCodec);
+  useEffect(() => {
+    setPendingCodec(currentCodec);
+  }, [currentCodec]);
+  const draft = pendingByCodec.value;
+  const pendingOptions = draft[pendingCodec];
+  const pendingMeta = CODECS[pendingCodec];
+  const optsSig = JSON.stringify(currentOptions);
+  const isApplied = pendingCodec === currentCodec && JSON.stringify(pendingOptions) === optsSig;
+  const isAtDefaults =
+    JSON.stringify(pendingOptions) === JSON.stringify(CODECS[pendingCodec].defaults);
+  function setPendingOptions(o: Record<string, unknown>) {
+    setDraftFor(pendingCodec, o);
+  }
+  function resetPendingOptions() {
+    resetDraftFor(pendingCodec);
+  }
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
@@ -28,13 +63,15 @@ export function Queue() {
         }
         try {
           const imageData = await decodeImageFile(file);
+          const def = getDefaultPreset();
           const added = addImage({
             filename: file.name,
             originalBytes: file.size,
             originalImageData: imageData,
             originalBlob: file,
-            codec: codec.peek(),
-            options: { ...options.peek() },
+            codec: def ? def.codec : codec.peek(),
+            options: def ? { ...def.options } : { ...options.peek() },
+            presetId: def?.id,
           });
           scheduleEncodeImage(added.id);
         } catch (err) {
@@ -67,7 +104,7 @@ export function Queue() {
       onDragLeave={() => setIsDragging(false)}
       onDrop={onDrop}
     >
-      <div class="grid lg:grid-cols-[1fr_360px] gap-6 max-w-7xl mx-auto items-start">
+      <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold">
@@ -101,8 +138,71 @@ export function Queue() {
             <p class="text-xs uppercase tracking-wide text-zinc-500 font-medium">Settings</p>
             <p class="text-xs text-zinc-400 mt-1">Apply to every image in the queue.</p>
           </div>
-          <CodecPicker value={codec.value} onChange={setCodec} />
-          <CodecOptionsPanel meta={meta} values={options.value} onChange={setOptions} />
+          <CodecPicker
+            value={pendingCodec}
+            showingPresets={showingPresets}
+            onSelectCodec={(c) => {
+              setShowingPresets(false);
+              setPendingCodec(c);
+            }}
+            onSelectPresets={() => setShowingPresets(true)}
+          />
+
+          {showingPresets ? (
+            <PresetsPanel
+              onApply={(pid) => applyPresetToAll(pid)}
+              applyLabel="Apply to all images"
+              activePresetId={getDefaultPreset()?.id}
+              appliedPresetId={(() => {
+                const all = items;
+                if (all.length === 0) return undefined;
+                const first = all[0]?.presetId;
+                if (!first) return undefined;
+                return all.every((i) => i.presetId === first) ? first : undefined;
+              })()}
+            />
+          ) : (
+            <>
+              <CodecOptionsPanel
+                meta={pendingMeta}
+                values={pendingOptions}
+                onChange={setPendingOptions}
+              />
+              <div class="flex gap-2">
+                <ApplyButton
+                  isApplied={isApplied}
+                  applyLabel={`Apply ${pendingMeta.name} to all`}
+                  onClick={() => applyToAll(pendingCodec, pendingOptions)}
+                />
+                <button
+                  type="button"
+                  onClick={resetPendingOptions}
+                  disabled={isAtDefaults}
+                  class="px-3 py-1.5 text-sm rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Reset this format's options to defaults"
+                >
+                  Reset
+                </button>
+              </div>
+              <div class="pt-1 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setSavePresetOpen(true)}
+                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                >
+                  Save current settings as preset…
+                </button>
+              </div>
+            </>
+          )}
+
+          {savePresetOpen && (
+            <PresetSaveModal
+              codec={pendingCodec}
+              options={pendingOptions}
+              onClose={() => setSavePresetOpen(false)}
+            />
+          )}
         </aside>
       </div>
     </div>
