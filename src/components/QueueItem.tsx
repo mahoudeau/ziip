@@ -3,6 +3,7 @@ import type { ImageItem } from '../state/images';
 import { removeImage, selectImage } from '../state/images';
 import { formatBytes, formatDeltaPct } from '../lib/format';
 import { encodedFilename, triggerBlobDownload } from '../lib/download';
+import { CODECS } from '../codecs/registry';
 import { Spinner } from './ui/Spinner';
 
 interface Props {
@@ -40,24 +41,31 @@ export function QueueItem({ item }: Props) {
       class="bg-zinc-900 rounded-xl overflow-hidden hover:ring-2 hover:ring-zinc-600 transition-all flex flex-col cursor-pointer"
       onClick={() => selectImage(item.id)}
     >
-      <div class="relative aspect-square bg-zinc-950">
+      <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-zinc-800">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span
+            class={`px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded flex items-center gap-1 ${STATUS_STYLES[item.status]}`}
+          >
+            {item.status === 'encoding' && <Spinner size={10} />}
+            {item.status}
+          </span>
+          <span class="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-zinc-700 text-zinc-200">
+            {CODECS[item.codec].outputExt}
+          </span>
+        </div>
+        {item.crop && (
+          <span class="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-amber-500/20 text-amber-300">
+            cropped
+          </span>
+        )}
+      </div>
+      <div class="relative aspect-square bg-zinc-950 overflow-hidden">
         <img
           src={previewUrl}
           alt=""
-          class="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          class="absolute inset-0 w-full h-full object-cover pointer-events-none"
           draggable={false}
         />
-        <div
-          class={`absolute top-2 left-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded flex items-center gap-1 ${STATUS_STYLES[item.status]}`}
-        >
-          {item.status === 'encoding' && <Spinner size={10} />}
-          {item.status}
-        </div>
-        {item.crop && (
-          <div class="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-amber-500/20 text-amber-300">
-            cropped
-          </div>
-        )}
       </div>
       <div class="p-3 space-y-1.5">
         <p class="text-sm font-medium truncate" title={item.filename}>{item.filename}</p>

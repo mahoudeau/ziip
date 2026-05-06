@@ -2,6 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { decodeImageFile } from '../lib/decode';
 import { addImage } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
+import { codec, options } from '../state/settings';
 
 export function DropZone() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +25,8 @@ export function DropZone() {
             originalBytes: file.size,
             originalImageData: imageData,
             originalBlob: file,
+            codec: codec.peek(),
+            options: { ...options.peek() },
           });
           scheduleEncodeImage(item.id);
         } catch (err) {

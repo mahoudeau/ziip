@@ -3,8 +3,6 @@ import { DropZone } from './components/DropZone';
 import { Editor } from './components/Editor';
 import { Queue } from './components/Queue';
 import { BatchActionBar } from './components/BatchActionBar';
-// Side-effect import: registers the global codec/options-change effect.
-import './state/encode';
 
 export function App() {
   const items = images.value;

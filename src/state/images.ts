@@ -1,4 +1,5 @@
 import { signal } from '@preact/signals';
+import { CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
 import type { CropRect } from '../lib/crop';
 
@@ -17,6 +18,11 @@ export interface ImageItem {
   originalBytes: number;
   originalImageData: ImageData;
   originalBlob: Blob;
+  /** Per-image codec choice. New images inherit from the global default in
+   * `state/settings.ts`. The Editor mutates only this image's codec; the
+   * Queue sidebar and "Apply to all" mutate every image's codec. */
+  codec: CodecId;
+  options: Record<string, unknown>;
   crop?: CropRect;
   status: ImageStatus;
   encoded?: EncodedResult;
@@ -31,7 +37,9 @@ export function nextImageId(): string {
   return `img-${nextId++}`;
 }
 
-export function addImage(item: Omit<ImageItem, 'id' | 'status'>): ImageItem {
+export function addImage(
+  item: Omit<ImageItem, 'id' | 'status'>,
+): ImageItem {
   const next: ImageItem = { ...item, id: nextImageId(), status: 'queued' };
   images.value = [...images.value, next];
   return next;
@@ -62,4 +70,19 @@ export function setCrop(id: string, crop: CropRect | undefined): void {
 export function getImage(id: string | null): ImageItem | null {
   if (!id) return null;
   return images.value.find((img) => img.id === id) ?? null;
+}
+
+/** Per-image codec change. Resets options to that codec's defaults so the
+ * stale option keys (which differ between codecs) don't carry over. */
+export function setImageCodec(id: string, codec: CodecId): void {
+  updateImage(id, {
+    codec,
+    options: { ...CODECS[codec].defaults },
+    encoded: undefined,
+    status: 'queued',
+  });
+}
+
+export function setImageOptions(id: string, options: Record<string, unknown>): void {
+  updateImage(id, { options, encoded: undefined, status: 'queued' });
 }

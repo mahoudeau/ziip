@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { getImage, removeImage, selectImage, selectedImageId, setCrop } from '../state/images';
-import { codec, options, setCodec, setOptions } from '../state/settings';
+import {
+  getImage,
+  removeImage,
+  selectImage,
+  selectedImageId,
+  setCrop,
+  setImageCodec,
+  setImageOptions,
+} from '../state/images';
+import { applyToAll } from '../state/settings';
 import { CODECS } from '../codecs/registry';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
@@ -17,10 +25,18 @@ export function Editor() {
   const selectedId = selectedImageId.value;
   const item = getImage(selectedId);
   if (!item) return null;
-  const { id, filename, originalImageData, originalBytes, originalBlob, crop, status, encoded } = item;
-
-  const codecId = codec.value;
-  const opts = options.value;
+  const {
+    id,
+    filename,
+    originalImageData,
+    originalBytes,
+    originalBlob,
+    crop,
+    status,
+    encoded,
+    codec: codecId,
+    options: opts,
+  } = item;
   const meta = CODECS[codecId];
 
   const [cropMode, setCropMode] = useState(false);
@@ -296,9 +312,32 @@ export function Editor() {
             </button>
           )}
 
-          <CodecPicker value={codecId} onChange={setCodec} />
+          <div class="space-y-2">
+            <CodecPicker
+              value={codecId}
+              onChange={(c) => {
+                setImageCodec(id, c);
+                scheduleEncodeImage(id);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => applyToAll(codecId, opts)}
+              class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+              title="Set every image in the queue to this image's codec + options"
+            >
+              Apply this format to all images
+            </button>
+          </div>
 
-          <CodecOptionsPanel meta={meta} values={opts} onChange={setOptions} />
+          <CodecOptionsPanel
+            meta={meta}
+            values={opts}
+            onChange={(o) => {
+              setImageOptions(id, o);
+              scheduleEncodeImage(id);
+            }}
+          />
 
           <dl class="text-sm space-y-1.5 pt-2 border-t border-zinc-800">
             <Row label="Original" value={formatBytes(originalBytes)} />
