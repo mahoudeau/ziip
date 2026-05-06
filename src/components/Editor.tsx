@@ -8,6 +8,11 @@ import {
   setImageCodecAndOptions,
 } from '../state/images';
 import { applyToAll } from '../state/settings';
+import {
+  pendingByCodec,
+  resetPendingOptions as resetDraftFor,
+  setPendingOptions as setDraftFor,
+} from '../state/draft';
 import { CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
 import { ApplyButton } from './ui/ApplyButton';
@@ -55,18 +60,26 @@ export function Editor() {
   const [showingPresets, setShowingPresets] = useState(() => !!presetId);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
 
-  // Pending codec / options the user is configuring. Applied to the image
-  // only when they click Apply / Rerun — codec tab clicks and option
-  // tweaks no longer auto-encode.
+  // Picker selection (which codec tab the user is on). Options come from
+  // the shared `pendingByCodec` draft signal in state/draft.ts so they
+  // survive page reloads.
   const [pendingCodec, setPendingCodec] = useState<CodecId>(codecId);
-  const [pendingOptions, setPendingOptions] = useState<Record<string, unknown>>(opts);
-  const optsSig = JSON.stringify(opts);
   useEffect(() => {
     setPendingCodec(codecId);
-    setPendingOptions(JSON.parse(optsSig));
-  }, [codecId, optsSig]);
+  }, [codecId]);
+  const draft = pendingByCodec.value;
+  const pendingOptions = draft[pendingCodec];
   const pendingMeta = CODECS[pendingCodec];
+  const optsSig = JSON.stringify(opts);
   const isApplied = pendingCodec === codecId && JSON.stringify(pendingOptions) === optsSig;
+  const isAtDefaults =
+    JSON.stringify(pendingOptions) === JSON.stringify(CODECS[pendingCodec].defaults);
+  function setPendingOptions(o: Record<string, unknown>) {
+    setDraftFor(pendingCodec, o);
+  }
+  function resetPendingOptions() {
+    resetDraftFor(pendingCodec);
+  }
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
 
   const aspectRatio = useMemo<number | null>(() => {
@@ -357,15 +370,9 @@ export function Editor() {
             value={pendingCodec}
             showingPresets={showingPresets}
             onSelectCodec={(c) => {
-              const wasOnPresets = showingPresets;
               setShowingPresets(false);
-              // Always reset to the codec's defaults when leaving the
-              // Saved tab — otherwise the codec tab inherits the preset's
-              // option values, which is misleading.
-              if (c !== pendingCodec || wasOnPresets) {
-                setPendingCodec(c);
-                setPendingOptions({ ...CODECS[c].defaults });
-              }
+              setPendingCodec(c);
+              // No options reset — pendingByCodec preserves per-codec edits.
             }}
             onSelectPresets={() => setShowingPresets(true)}
           />
@@ -393,6 +400,15 @@ export function Editor() {
                     scheduleEncodeImage(id);
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={resetPendingOptions}
+                  disabled={isAtDefaults}
+                  class="px-3 py-1.5 text-sm rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Reset this format's options to defaults"
+                >
+                  Reset
+                </button>
               </div>
               <div class="space-y-2 pt-1 border-t border-zinc-800">
                 <button

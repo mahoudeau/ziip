@@ -1,3 +1,4 @@
+import type { CodecId } from '../codecs/types';
 import type { Preset } from './presets';
 
 const SCHEMA_VERSION = 1;
@@ -5,6 +6,7 @@ const KEY_PREFIX = 'ziip.';
 
 const KEY_SCHEMA = `${KEY_PREFIX}schemaVersion`;
 const KEY_PRESETS = `${KEY_PREFIX}presets`;
+const KEY_DRAFT = `${KEY_PREFIX}draft`;
 
 interface PresetWire {
   id: unknown;
@@ -74,5 +76,28 @@ export function persistPresets(list: Preset[]): void {
     localStorage.setItem(KEY_SCHEMA, String(SCHEMA_VERSION));
   } catch (err) {
     console.warn('Failed to persist presets', err);
+  }
+}
+
+export type CodecDraftMap = Partial<Record<CodecId, Record<string, unknown>>>;
+
+export function loadStoredDraft(): CodecDraftMap {
+  try {
+    const raw = localStorage.getItem(KEY_DRAFT);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as CodecDraftMap;
+  } catch (err) {
+    console.warn('Failed to load draft from localStorage', err);
+    return {};
+  }
+}
+
+export function persistDraft(draft: Record<CodecId, Record<string, unknown>>): void {
+  try {
+    localStorage.setItem(KEY_DRAFT, JSON.stringify(draft));
+  } catch (err) {
+    console.warn('Failed to persist draft', err);
   }
 }

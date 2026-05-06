@@ -3,6 +3,11 @@ import { decodeImageFile } from '../lib/decode';
 import { addImage, images } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
 import { applyToAll, codec, options } from '../state/settings';
+import {
+  pendingByCodec,
+  resetPendingOptions as resetDraftFor,
+  setPendingOptions as setDraftFor,
+} from '../state/draft';
 import { CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
 import { QueueItem } from './QueueItem';
@@ -23,18 +28,27 @@ export function Queue() {
   const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
   const [savePresetOpen, setSavePresetOpen] = useState(false);
 
-  // Pending codec / options the user is configuring before applying to all.
+  // Picker selection. Options come from the shared draft signal so they
+  // persist across page reloads and stay in sync between Queue + Editor.
   const currentCodec = codec.value;
   const currentOptions = options.value;
   const [pendingCodec, setPendingCodec] = useState<CodecId>(currentCodec);
-  const [pendingOptions, setPendingOptions] = useState<Record<string, unknown>>(currentOptions);
-  const optsSig = JSON.stringify(currentOptions);
   useEffect(() => {
     setPendingCodec(currentCodec);
-    setPendingOptions(JSON.parse(optsSig));
-  }, [currentCodec, optsSig]);
+  }, [currentCodec]);
+  const draft = pendingByCodec.value;
+  const pendingOptions = draft[pendingCodec];
   const pendingMeta = CODECS[pendingCodec];
+  const optsSig = JSON.stringify(currentOptions);
   const isApplied = pendingCodec === currentCodec && JSON.stringify(pendingOptions) === optsSig;
+  const isAtDefaults =
+    JSON.stringify(pendingOptions) === JSON.stringify(CODECS[pendingCodec].defaults);
+  function setPendingOptions(o: Record<string, unknown>) {
+    setDraftFor(pendingCodec, o);
+  }
+  function resetPendingOptions() {
+    resetDraftFor(pendingCodec);
+  }
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
@@ -128,12 +142,8 @@ export function Queue() {
             value={pendingCodec}
             showingPresets={showingPresets}
             onSelectCodec={(c) => {
-              const wasOnPresets = showingPresets;
               setShowingPresets(false);
-              if (c !== pendingCodec || wasOnPresets) {
-                setPendingCodec(c);
-                setPendingOptions({ ...CODECS[c].defaults });
-              }
+              setPendingCodec(c);
             }}
             onSelectPresets={() => setShowingPresets(true)}
           />
@@ -164,6 +174,15 @@ export function Queue() {
                   applyLabel={`Apply ${pendingMeta.name} to all`}
                   onClick={() => applyToAll(pendingCodec, pendingOptions)}
                 />
+                <button
+                  type="button"
+                  onClick={resetPendingOptions}
+                  disabled={isAtDefaults}
+                  class="px-3 py-1.5 text-sm rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Reset this format's options to defaults"
+                >
+                  Reset
+                </button>
               </div>
               <div class="pt-1 border-t border-zinc-800">
                 <button
