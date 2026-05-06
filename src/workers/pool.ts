@@ -1,6 +1,8 @@
 import CompressWorker from './compress.worker?worker';
 import type { CodecId, EncodeJob, EncodeResult } from '../codecs/types';
 
+export type JobPriority = 'high' | 'normal';
+
 interface PendingJob {
   job: EncodeJob;
   resolve: (result: { buffer: ArrayBuffer; msElapsed: number }) => void;
@@ -16,7 +18,8 @@ const POOL_SIZE = Math.max(1, (navigator.hardwareConcurrency ?? 2) - 1);
 
 class CompressPool {
   private workers: WorkerSlot[] = [];
-  private queue: PendingJob[] = [];
+  private highQueue: PendingJob[] = [];
+  private normalQueue: PendingJob[] = [];
   private inflight = new Map<number, PendingJob>();
   private nextId = 1;
 
@@ -32,19 +35,23 @@ class CompressPool {
     codec: CodecId,
     options: Record<string, unknown>,
     imageData: ImageData,
+    priority: JobPriority = 'normal',
   ): Promise<{ buffer: ArrayBuffer; msElapsed: number }> {
     return new Promise((resolve, reject) => {
       const job: EncodeJob = { id: this.nextId++, codec, options, imageData };
-      this.queue.push({ job, resolve, reject });
+      const pending: PendingJob = { job, resolve, reject };
+      if (priority === 'high') this.highQueue.push(pending);
+      else this.normalQueue.push(pending);
       this.dispatch();
     });
   }
 
   private dispatch() {
-    while (this.queue.length > 0) {
+    while (true) {
       const slot = this.workers.find((s) => !s.busy);
       if (!slot) return;
-      const pending = this.queue.shift()!;
+      const pending = this.highQueue.shift() ?? this.normalQueue.shift();
+      if (!pending) return;
       slot.busy = true;
       this.inflight.set(pending.job.id, pending);
       // Structured-clone the ImageData (default postMessage behavior). We

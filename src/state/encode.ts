@@ -3,7 +3,7 @@ import { CODECS } from '../codecs/registry';
 import { cropImageData } from '../lib/crop';
 import { getCompressPool } from '../workers/pool';
 import { codec, options } from './settings';
-import { images, updateImage } from './images';
+import { images, selectedImageId, updateImage } from './images';
 
 const DEBOUNCE_MS = 250;
 
@@ -58,7 +58,10 @@ async function runEncodeImage(id: string): Promise<void> {
 
   try {
     const data = img.crop ? cropImageData(img.originalImageData, img.crop) : img.originalImageData;
-    const { buffer, msElapsed } = await getCompressPool().enqueue(codecId, opts, data);
+    // The currently-selected image is what the user is actively previewing
+    // in the editor — its re-encodes preempt batch jobs.
+    const priority = id === selectedImageId.peek() ? 'high' : 'normal';
+    const { buffer, msElapsed } = await getCompressPool().enqueue(codecId, opts, data, priority);
     if (generationByImage.get(id) !== gen) return;
     const blob = new Blob([buffer], { type: CODECS[codecId].outputMime });
     updateImage(id, {
