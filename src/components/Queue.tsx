@@ -1,14 +1,16 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { decodeImageFile } from '../lib/decode';
 import { addImage, images } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
-import { codec, options, setCodec, setOptions } from '../state/settings';
+import { applyToAll, codec, options } from '../state/settings';
 import { CODECS } from '../codecs/registry';
+import type { CodecId } from '../codecs/types';
 import { QueueItem } from './QueueItem';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
 import { PresetsPanel } from './PresetsPanel';
 import { PresetSaveModal } from './PresetSaveModal';
+import { ApplyButton } from './ui/ApplyButton';
 import { applyPresetToAll, getDefaultPreset } from '../state/presets';
 
 export function Queue() {
@@ -20,7 +22,19 @@ export function Queue() {
   // straight away what's being applied to incoming images.
   const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
   const [savePresetOpen, setSavePresetOpen] = useState(false);
-  const meta = CODECS[codec.value];
+
+  // Pending codec / options the user is configuring before applying to all.
+  const currentCodec = codec.value;
+  const currentOptions = options.value;
+  const [pendingCodec, setPendingCodec] = useState<CodecId>(currentCodec);
+  const [pendingOptions, setPendingOptions] = useState<Record<string, unknown>>(currentOptions);
+  const optsSig = JSON.stringify(currentOptions);
+  useEffect(() => {
+    setPendingCodec(currentCodec);
+    setPendingOptions(JSON.parse(optsSig));
+  }, [currentCodec, optsSig]);
+  const pendingMeta = CODECS[pendingCodec];
+  const isApplied = pendingCodec === currentCodec && JSON.stringify(pendingOptions) === optsSig;
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
@@ -111,11 +125,15 @@ export function Queue() {
             <p class="text-xs text-zinc-400 mt-1">Apply to every image in the queue.</p>
           </div>
           <CodecPicker
-            value={codec.value}
+            value={pendingCodec}
             showingPresets={showingPresets}
             onSelectCodec={(c) => {
+              const wasOnPresets = showingPresets;
               setShowingPresets(false);
-              if (c !== codec.value) setCodec(c);
+              if (c !== pendingCodec || wasOnPresets) {
+                setPendingCodec(c);
+                setPendingOptions({ ...CODECS[c].defaults });
+              }
             }}
             onSelectPresets={() => setShowingPresets(true)}
           />
@@ -135,7 +153,18 @@ export function Queue() {
             />
           ) : (
             <>
-              <CodecOptionsPanel meta={meta} values={options.value} onChange={setOptions} />
+              <CodecOptionsPanel
+                meta={pendingMeta}
+                values={pendingOptions}
+                onChange={setPendingOptions}
+              />
+              <div class="flex gap-2">
+                <ApplyButton
+                  isApplied={isApplied}
+                  applyLabel={`Apply ${pendingMeta.name} to all`}
+                  onClick={() => applyToAll(pendingCodec, pendingOptions)}
+                />
+              </div>
               <div class="pt-1 border-t border-zinc-800">
                 <button
                   type="button"
@@ -150,8 +179,8 @@ export function Queue() {
 
           {savePresetOpen && (
             <PresetSaveModal
-              codec={codec.value}
-              options={options.value}
+              codec={pendingCodec}
+              options={pendingOptions}
               onClose={() => setSavePresetOpen(false)}
             />
           )}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { CODECS } from '../codecs/registry';
 import { deletePreset, presets, renamePreset, setDefaultPreset } from '../state/presets';
 import { formatBytes } from '../lib/format';
+import { ApplyButton } from './ui/ApplyButton';
 
 interface Props {
   /** What to call when the user clicks Apply on a preset. The Editor wires
@@ -178,18 +179,11 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
+                      <ApplyButton
+                        isApplied={appliedPresetId === preset.id}
+                        applyLabel={applyLabel}
                         onClick={() => onApply(preset.id)}
-                        class={`flex-1 px-3 py-1.5 text-sm rounded font-medium transition-colors ${
-                          appliedPresetId === preset.id
-                            ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                            : 'bg-zinc-100 text-zinc-900 hover:bg-white'
-                        }`}
-                        title={appliedPresetId === preset.id ? 'Re-encode using this preset' : undefined}
-                      >
-                        {appliedPresetId === preset.id ? 'Rerun' : applyLabel}
-                      </button>
+                      />
                       <KebabMenu
                         onRename={() => startRename(preset.id, preset.name)}
                         onDelete={() => setConfirmDeleteId(preset.id)}

@@ -92,3 +92,21 @@ export function setImageCodec(id: string, codec: CodecId): void {
 export function setImageOptions(id: string, options: Record<string, unknown>): void {
   updateImage(id, { options, presetId: undefined, encoded: undefined, status: 'queued' });
 }
+
+/** Atomic codec + options update — used by the Editor's Apply button so
+ * the codec swap and the user's option choices land in a single signal
+ * update (avoids a transient state where options reset to the new codec's
+ * defaults before the user's choices are reapplied). */
+export function setImageCodecAndOptions(
+  id: string,
+  codec: CodecId,
+  options: Record<string, unknown>,
+): void {
+  updateImage(id, {
+    codec,
+    options: { ...options },
+    presetId: undefined,
+    encoded: undefined,
+    status: 'queued',
+  });
+}

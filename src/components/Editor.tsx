@@ -5,11 +5,12 @@ import {
   selectImage,
   selectedImageId,
   setCrop,
-  setImageCodec,
-  setImageOptions,
+  setImageCodecAndOptions,
 } from '../state/images';
 import { applyToAll } from '../state/settings';
 import { CODECS } from '../codecs/registry';
+import type { CodecId } from '../codecs/types';
+import { ApplyButton } from './ui/ApplyButton';
 import { CodecPicker } from './CodecPicker';
 import { CodecOptionsPanel } from './CodecOptionsPanel';
 import { CompareSlider } from './CompareSlider';
@@ -53,6 +54,19 @@ export function Editor() {
   // start the sidebar on the Presets tab so the link is immediately visible.
   const [showingPresets, setShowingPresets] = useState(() => !!presetId);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
+
+  // Pending codec / options the user is configuring. Applied to the image
+  // only when they click Apply / Rerun — codec tab clicks and option
+  // tweaks no longer auto-encode.
+  const [pendingCodec, setPendingCodec] = useState<CodecId>(codecId);
+  const [pendingOptions, setPendingOptions] = useState<Record<string, unknown>>(opts);
+  const optsSig = JSON.stringify(opts);
+  useEffect(() => {
+    setPendingCodec(codecId);
+    setPendingOptions(JSON.parse(optsSig));
+  }, [codecId, optsSig]);
+  const pendingMeta = CODECS[pendingCodec];
+  const isApplied = pendingCodec === codecId && JSON.stringify(pendingOptions) === optsSig;
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
 
   const aspectRatio = useMemo<number | null>(() => {
@@ -340,13 +354,17 @@ export function Editor() {
           )}
 
           <CodecPicker
-            value={codecId}
+            value={pendingCodec}
             showingPresets={showingPresets}
             onSelectCodec={(c) => {
+              const wasOnPresets = showingPresets;
               setShowingPresets(false);
-              if (c !== codecId) {
-                setImageCodec(id, c);
-                scheduleEncodeImage(id);
+              // Always reset to the codec's defaults when leaving the
+              // Saved tab — otherwise the codec tab inherits the preset's
+              // option values, which is misleading.
+              if (c !== pendingCodec || wasOnPresets) {
+                setPendingCodec(c);
+                setPendingOptions({ ...CODECS[c].defaults });
               }
             }}
             onSelectPresets={() => setShowingPresets(true)}
@@ -362,20 +380,27 @@ export function Editor() {
           ) : (
             <>
               <CodecOptionsPanel
-                meta={meta}
-                values={opts}
-                onChange={(o) => {
-                  setImageOptions(id, o);
-                  scheduleEncodeImage(id);
-                }}
+                meta={pendingMeta}
+                values={pendingOptions}
+                onChange={setPendingOptions}
               />
+              <div class="flex gap-2">
+                <ApplyButton
+                  isApplied={isApplied}
+                  applyLabel={`Apply ${pendingMeta.name}`}
+                  onClick={() => {
+                    setImageCodecAndOptions(id, pendingCodec, pendingOptions);
+                    scheduleEncodeImage(id);
+                  }}
+                />
+              </div>
               <div class="space-y-2 pt-1 border-t border-zinc-800">
                 <button
                   type="button"
-                  onClick={() => applyToAll(codecId, opts)}
+                  onClick={() => applyToAll(pendingCodec, pendingOptions)}
                   class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
                 >
-                  Apply this format to all images
+                  Apply these settings to all images
                 </button>
                 <button
                   type="button"
@@ -384,7 +409,7 @@ export function Editor() {
                 >
                   Save current settings as preset…
                 </button>
-                {presetId && (
+                {presetId && isApplied && (
                   <p class="text-xs text-amber-300/80 text-center">
                     Settings come from a preset · changes will detach
                   </p>
@@ -395,8 +420,8 @@ export function Editor() {
 
           {savePresetOpen && (
             <PresetSaveModal
-              codec={codecId}
-              options={opts}
+              codec={pendingCodec}
+              options={pendingOptions}
               onClose={() => setSavePresetOpen(false)}
             />
           )}
