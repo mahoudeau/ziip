@@ -42,6 +42,12 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
     return { w: naturalDims.w * baseScale, h: naturalDims.h * baseScale };
   }, [naturalDims, containerSize]);
 
+  // Where the fitted image sits at rest (centred in the full-size card). The
+  // image is free to pan/zoom across the *whole* card from here — the letterbox
+  // margins are just empty space at rest, not a clip boundary.
+  const fitOffsetX = (containerSize.w - fitDims.w) / 2;
+  const fitOffsetY = (containerSize.h - fitDims.h) / 2;
+
   const viewer = useViewer(containerRef, fitRef);
 
   useEffect(() => {
@@ -52,11 +58,9 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
     });
   }, [onViewerReady, naturalDims, viewer.fit, viewer.zoom100]);
 
-  const dividerInFit = useMemo(() => {
-    const dividerScreenX = pos * containerSize.w;
-    const fitOffsetX = (containerSize.w - fitDims.w) / 2;
-    return Math.max(0, Math.min(fitDims.w, dividerScreenX - fitOffsetX));
-  }, [pos, containerSize.w, fitDims.w]);
+  // Divider position in card pixels. Each side is clipped to its half of the
+  // *full card height*, so the wipe spans everything the image can be panned to.
+  const dividerX = pos * containerSize.w;
 
   function updateFromClientX(clientX: number) {
     const el = containerRef.current;
@@ -66,7 +70,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
     setPos(Math.max(0, Math.min(1, ratio)));
   }
 
-  // Container handlers — pan is the default gesture.
+  // Card handlers — pan is the default gesture.
   function onContainerDown(e: PointerEvent) {
     viewer.beginPan(e, { force: true });
   }
@@ -120,16 +124,13 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
   }
 
   const transform = `translate(${viewer.state.tx}px, ${viewer.state.ty}px) scale(${viewer.state.scale})`;
-  const containerCursor = 'grab';
   const showImage = encodedUrl ?? originalUrl;
   const zoomPct = naturalDims ? Math.round((fitDims.w / naturalDims.w) * viewer.state.scale * 100) : null;
   const isReset = viewer.state.scale === 1 && viewer.state.tx === 0 && viewer.state.ty === 0;
 
-  // Pill is centered in the visible right portion (between divider and fit
-  // wrapper's right edge), and vertically centered in the container.
-  const dividerScreenX = pos * containerSize.w;
-  const fitRightEdgeX = (containerSize.w + fitDims.w) / 2;
-  const pillLeft = (Math.min(dividerScreenX, fitRightEdgeX) + fitRightEdgeX) / 2;
+  // Encoding pill: centred in the visible encoded region (divider → image right).
+  const imageRightX = fitOffsetX + fitDims.w;
+  const pillLeft = (Math.min(dividerX, imageRightX) + imageRightX) / 2;
 
   const [encodingElapsed, setEncodingElapsed] = useState(0);
   useEffect(() => {
@@ -145,8 +146,8 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
   return (
     <div
       ref={containerRef}
-      class="relative w-full h-full bg-surface rounded-xl overflow-hidden select-none touch-none flex items-center justify-center"
-      style={`cursor: ${containerCursor}`}
+      class="relative w-full h-full bg-surface rounded-xl overflow-hidden select-none touch-none"
+      style="cursor: grab"
       onPointerDown={onContainerDown}
       onPointerMove={onContainerMove}
       onPointerUp={onContainerUp}
@@ -155,45 +156,55 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
       tabIndex={0}
       aria-label="Compare slider — click and drag to pan; drag the divider to compare"
     >
+      {/* Invisible reference box at the image's rest position — the viewer uses
+          it as the transform origin for cursor-anchored zoom. */}
       <div
         ref={fitRef}
-        class="relative"
-        style={`width: ${fitDims.w}px; height: ${fitDims.h}px;`}
+        class="absolute pointer-events-none"
+        style={`left: ${fitOffsetX}px; top: ${fitOffsetY}px; width: ${fitDims.w}px; height: ${fitDims.h}px;`}
+      />
+
+      {/* Encoded image — clipped to the RIGHT of the divider, full card height.
+          The inner wrapper is placed at the image's rest offset (shifted by the
+          clip's own left edge) so it stays registered with the original. */}
+      <div
+        class="absolute top-0 bottom-0 right-0 overflow-hidden pointer-events-none"
+        style={`left: ${dividerX}px;`}
       >
         <div
-          class="absolute inset-0"
-          style={`transform: ${transform}; transform-origin: 0 0;`}
+          class="absolute"
+          style={`left: ${fitOffsetX - dividerX}px; top: ${fitOffsetY}px; width: ${fitDims.w}px; height: ${fitDims.h}px; transform: ${transform}; transform-origin: 0 0;`}
         >
           <img
             src={showImage}
             alt=""
-            class="block w-full h-full pointer-events-none"
             draggable={false}
+            class="block w-full h-full pointer-events-none transition-[filter] duration-200"
+            // Desaturate the encoded layer in place so the effect tracks the
+            // image as it pans/zooms (a fixed overlay would fall out of sync).
+            style={encoding ? 'filter: grayscale(1) brightness(0.75)' : undefined}
           />
         </div>
+      </div>
+      {/* Original image — clipped to the LEFT of the divider, full card height.
+          Each side is clipped to its own half so neither bleeds across the
+          divider, and panning into a margin reveals the image, not a bar. */}
+      <div
+        class="absolute top-0 bottom-0 left-0 overflow-hidden pointer-events-none"
+        style={`width: ${dividerX}px;`}
+      >
         <div
-          class="absolute top-0 left-0 bottom-0 overflow-hidden pointer-events-none"
-          style={`width: ${dividerInFit}px;`}
+          class="absolute"
+          style={`left: ${fitOffsetX}px; top: ${fitOffsetY}px; width: ${fitDims.w}px; height: ${fitDims.h}px; transform: ${transform}; transform-origin: 0 0;`}
         >
-          <div
-            class="absolute top-0 left-0"
-            style={`width: ${fitDims.w}px; height: ${fitDims.h}px; transform: ${transform}; transform-origin: 0 0;`}
-          >
-            <img
-              src={originalUrl}
-              alt=""
-              onLoad={onImgLoad}
-              class="block w-full h-full pointer-events-none"
-              draggable={false}
-            />
-          </div>
+          <img
+            src={originalUrl}
+            alt=""
+            onLoad={onImgLoad}
+            draggable={false}
+            class="block w-full h-full pointer-events-none"
+          />
         </div>
-        {/* Encoding indicator: desaturates only the right (encoded) portion
-            via backdrop-filter so the original on the left stays vivid. */}
-        <div
-          class="absolute top-0 bottom-0 right-0 pointer-events-none transition-opacity duration-200 backdrop-grayscale backdrop-brightness-75"
-          style={`left: ${dividerInFit}px; opacity: ${encoding ? 1 : 0};`}
-        />
       </div>
 
       {/* Divider hit zone — wide, transparent, captures the divider drag */}
@@ -222,8 +233,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
 
       <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-white rounded pointer-events-none">Original</div>
 
-      {/* Encoding pill — vertically centered, horizontally between the
-          divider and the right edge of the image. */}
+      {/* Encoding pill — vertically centred, in the encoded half. */}
       {encoding && fitDims.w > 0 && (
         <div
           class="absolute flex items-center gap-2 px-3 py-1.5 bg-black/75 text-white text-xs rounded-full pointer-events-none backdrop-blur-sm shadow-lg whitespace-nowrap"
@@ -236,7 +246,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
         </div>
       )}
 
-      {/* Zoom indicator + fit / 100% controls. stopPropagation so the container's
+      {/* Zoom indicator + fit / 100% controls. stopPropagation so the card's
           pan-on-pointerdown doesn't swallow the button click. */}
       <div
         class="absolute top-3 right-3 flex items-center gap-1 text-xs"
