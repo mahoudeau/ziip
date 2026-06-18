@@ -39,10 +39,9 @@
   <!-- All info centered inside the 630×630 square-safe zone -->
   <g text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" fill="#ffffff">
     <!-- App icon + wordmark on one line (reuses the favicon Z mark) -->
-    <rect x="437" y="112" width="136" height="136" rx="30" fill="#ffffff" fill-opacity="0.12" />
+    <rect x="437" y="112" width="136" height="136" rx="30" fill="#ffffff" fill-opacity="0.15" />
     <svg x="445" y="120" width="120" height="120" viewBox="0 0 120 120">
-      <rect width="120" height="120" rx="26" fill="#ffffff" />
-      <g fill="#6c5ce7">
+      <g fill="#ffffff">
         <path d="M28,18 L92,18 L74,36 L28,36 L24,32 L24,22 Z" />
         <path d="M46,84 L88,84 L92,88 L92,98 L88,102 L28,102 Z" />
         <rect x="-1.90" y="-5.75" width="3.80" height="11.50" rx="1.4" transform="translate(82.6,26.5) rotate(119.7)" />
@@ -65,7 +64,7 @@
         <rect x="-1.90" y="-5.75" width="3.80" height="11.50" rx="1.4" transform="translate(35.2,97.4) rotate(119.7)" />
       </g>
     </svg>
-    <rect x="437" y="112" width="136" height="136" rx="30" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2" />
+    <rect x="437" y="112" width="136" height="136" rx="30" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2" />
     <text x="589" y="215" text-anchor="start" font-family="'Arial Rounded MT Bold', 'Helvetica Neue', Arial, sans-serif" font-size="100" font-weight="800">Ziip</text>
 
     <!-- Tagline + subline (wrapped to fit the square) -->

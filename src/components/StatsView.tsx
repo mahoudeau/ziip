@@ -169,7 +169,7 @@ export function StatsView({ asPage = false }: { asPage?: boolean } = {}) {
                 <div class="flex items-center gap-5">
                   {/* Icon display case: mapped icon when present, emoji fallback otherwise. */}
                   <div
-                    class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white ring-1 ring-black/5 shadow-lg text-5xl leading-none overflow-hidden"
+                    class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white/15 ring-1 ring-white/25 shadow-[0_0_30px_rgba(255,255,255,0.2)] text-5xl leading-none overflow-hidden"
                     aria-hidden="true"
                   >
                     {shownIcon ? <img src={shownIcon} alt="" class="w-14 h-14 object-contain" /> : shown.icon}
