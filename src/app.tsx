@@ -47,9 +47,9 @@ export function App() {
         )}
       </main>
       {showBatchBar && <BatchActionBar />}
-      {/* Footer on every page except the active queue/editor, where the sticky
-          batch bar owns the bottom edge. */}
-      {!showBatchBar && <Footer />}
+      {/* Footer shows everywhere (credits + install button). On the queue/editor
+          it sits below the sticky batch bar, reachable at the bottom of the page. */}
+      <Footer />
     </div>
   );
 }
