@@ -11,9 +11,10 @@
     "dev": "vite",
     "build": "vite build",
     "build:lab": "vite build --mode lab",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "typecheck": "tsc --noEmit",
-    "deploy:lab": "vite build --mode lab && ./deploy.sh app lab"
+    "deploy:lab": "vite build --mode lab && ./deploy.sh app lab",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@fontsource-variable/fredoka": "^5.2.10",
@@ -29,11 +30,13 @@
     "preact": "^10.25.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.42.0",
     "@preact/preset-vite": "^2.10.0",
     "@tailwindcss/vite": "^4.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "wrangler": "^4.102.0"
   }
 }
