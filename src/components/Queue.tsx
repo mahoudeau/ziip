@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
-import { addImage, applyResizeMultiplierToAll, clearImages, decodingCount, images } from '../state/images';
-import { scheduleEncodeAll, scheduleEncodeImage } from '../state/encode';
+import { importImageFiles } from '../lib/importImages';
+import { applyResizeMultiplierToAll, clearImages, decodingCount, images } from '../state/images';
+import { scheduleEncodeAll } from '../state/encode';
 import { Spinner } from './ui/Spinner';
 import { applyToAll, codec, options } from '../state/settings';
 import {
@@ -54,37 +54,8 @@ export function Queue() {
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
-    let firstError: string | null = null;
-    // Decode in parallel so each tile appears as soon as its decode finishes,
-    // instead of one-by-one waiting for each previous decode to complete.
-    await Promise.all(
-      Array.from(files).map(async (file) => {
-        if (!isLikelyImageFile(file)) {
-          firstError ??= `Skipped "${file.name}" — not an image.`;
-          return;
-        }
-        decodingCount.value++;
-        try {
-          const imageData = await decodeImageFile(file);
-          const def = getDefaultPreset();
-          const added = addImage({
-            filename: file.name,
-            originalBytes: file.size,
-            originalImageData: imageData,
-            originalBlob: file,
-            codec: def ? def.codec : codec.peek(),
-            options: def ? { ...def.options } : { ...options.peek() },
-            presetId: def?.id,
-          });
-          scheduleEncodeImage(added.id);
-        } catch (err) {
-          firstError ??= `Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`;
-        } finally {
-          decodingCount.value--;
-        }
-      }),
-    );
-    if (firstError) setError(firstError);
+    const err = await importImageFiles(files);
+    if (err) setError(err);
   }
 
   function onDrop(e: DragEvent) {

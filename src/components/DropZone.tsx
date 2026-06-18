@@ -1,11 +1,8 @@
 import { useRef, useState } from 'preact/hooks';
-import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
+import { importImageFiles } from '../lib/importImages';
 import { Wordmark } from './ui/Logo';
 import { Spinner } from './ui/Spinner';
-import { addImage, decodingCount } from '../state/images';
-import { scheduleEncodeImage } from '../state/encode';
-import { codec, options } from '../state/settings';
-import { getDefaultPreset } from '../state/presets';
+import { decodingCount } from '../state/images';
 
 export function DropZone() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -14,35 +11,8 @@ export function DropZone() {
 
   async function handleFiles(files: FileList | File[]) {
     setError(null);
-    let firstError: string | null = null;
-    await Promise.all(
-      Array.from(files).map(async (file) => {
-        if (!isLikelyImageFile(file)) {
-          firstError ??= `"${file.name}" is not an image (${file.type || 'unknown type'}).`;
-          return;
-        }
-        decodingCount.value++;
-        try {
-          const imageData = await decodeImageFile(file);
-          const def = getDefaultPreset();
-          const item = addImage({
-            filename: file.name,
-            originalBytes: file.size,
-            originalImageData: imageData,
-            originalBlob: file,
-            codec: def ? def.codec : codec.peek(),
-            options: def ? { ...def.options } : { ...options.peek() },
-            presetId: def?.id,
-          });
-          scheduleEncodeImage(item.id);
-        } catch (err) {
-          firstError ??= `Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`;
-        } finally {
-          decodingCount.value--;
-        }
-      }),
-    );
-    if (firstError) setError(firstError);
+    const err = await importImageFiles(files);
+    if (err) setError(err);
   }
 
   function onDrop(e: DragEvent) {
