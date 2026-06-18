@@ -44,6 +44,10 @@ export interface ImageItem {
 
 export const images = signal<ImageItem[]>([]);
 export const selectedImageId = signal<string | null>(null);
+/** Files currently being decoded (before they appear in the queue). Drives the
+ * "decoding…" indicator — matters for slow inputs like HEIC, where libheif
+ * takes a few seconds and nothing would otherwise show. */
+export const decodingCount = signal(0);
 
 let nextId = 1;
 export function nextImageId(): string {

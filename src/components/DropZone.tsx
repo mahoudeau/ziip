@@ -1,7 +1,8 @@
 import { useRef, useState } from 'preact/hooks';
 import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
 import { LogoMark } from './ui/Logo';
-import { addImage } from '../state/images';
+import { Spinner } from './ui/Spinner';
+import { addImage, decodingCount } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
 import { codec, options } from '../state/settings';
 import { getDefaultPreset } from '../state/presets';
@@ -20,6 +21,7 @@ export function DropZone() {
           firstError ??= `"${file.name}" is not an image (${file.type || 'unknown type'}).`;
           return;
         }
+        decodingCount.value++;
         try {
           const imageData = await decodeImageFile(file);
           const def = getDefaultPreset();
@@ -35,6 +37,8 @@ export function DropZone() {
           scheduleEncodeImage(item.id);
         } catch (err) {
           firstError ??= `Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`;
+        } finally {
+          decodingCount.value--;
         }
       }),
     );
@@ -91,6 +95,12 @@ export function DropZone() {
           class="hidden"
           onChange={onChange}
         />
+        {decodingCount.value > 0 && (
+          <p class="mt-6 flex items-center justify-center gap-2 text-sm text-muted">
+            <Spinner size={14} />
+            Decoding {decodingCount.value} image{decodingCount.value === 1 ? '' : 's'}…
+          </p>
+        )}
       </div>
       {error && <p class="mt-6 text-sm text-red-600 max-w-md text-center">{error}</p>}
     </div>

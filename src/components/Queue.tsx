@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
-import { addImage, applyResizeMultiplierToAll, clearImages, images } from '../state/images';
+import { addImage, applyResizeMultiplierToAll, clearImages, decodingCount, images } from '../state/images';
 import { scheduleEncodeAll, scheduleEncodeImage } from '../state/encode';
+import { Spinner } from './ui/Spinner';
 import { applyToAll, codec, options } from '../state/settings';
 import {
   pendingByCodec,
@@ -62,6 +63,7 @@ export function Queue() {
           firstError ??= `Skipped "${file.name}" — not an image.`;
           return;
         }
+        decodingCount.value++;
         try {
           const imageData = await decodeImageFile(file);
           const def = getDefaultPreset();
@@ -77,6 +79,8 @@ export function Queue() {
           scheduleEncodeImage(added.id);
         } catch (err) {
           firstError ??= `Could not decode "${file.name}". ${err instanceof Error ? err.message : ''}`;
+        } finally {
+          decodingCount.value--;
         }
       }),
     );
@@ -108,8 +112,13 @@ export function Queue() {
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
               {items.length} image{items.length === 1 ? '' : 's'}
+              {decodingCount.value > 0 && (
+                <span class="flex items-center gap-1.5 text-sm font-normal text-muted">
+                  <Spinner size={13} /> decoding {decodingCount.value}…
+                </span>
+              )}
             </h2>
             <div class="flex items-center gap-2">
               {confirmingClear ? (
