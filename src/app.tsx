@@ -8,6 +8,7 @@ import { BatchActionBar } from './components/BatchActionBar';
 import { StatsView } from './components/StatsView';
 import { PrivacyPage } from './components/PrivacyPage';
 import { AboutPage } from './components/AboutPage';
+import { Footer } from './components/Footer';
 
 export function App() {
   const view = route.value;
@@ -35,6 +36,9 @@ export function App() {
         )}
       </main>
       {showBatchBar && <BatchActionBar />}
+      {/* Footer on every page except the active queue/editor, where the sticky
+          batch bar owns the bottom edge. */}
+      {!showBatchBar && <Footer />}
     </div>
   );
 }
