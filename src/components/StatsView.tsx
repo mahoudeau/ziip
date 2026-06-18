@@ -123,7 +123,7 @@ export function StatsView() {
       {s.totalCompressions === 0 ? (
         <div class="bg-surface rounded-2xl p-12 text-center shadow-sm">
           <p class="text-ink font-medium mb-2">No compressions yet</p>
-          <p class="text-sm text-faint">Drop some images above and compress them to fill this in.</p>
+          <p class="text-sm text-faint">Drop and compress some images to see your stats here.</p>
         </div>
       ) : (
         <div class="space-y-5">
