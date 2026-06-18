@@ -4,7 +4,7 @@ import { presets } from '../state/presets';
 import { CODECS, CODEC_IDS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
 import { formatBytes, formatDeltaPct } from '../lib/format';
-import { formatComparison, formatComparisonParts } from '../lib/compare';
+import { pickComparison, formatMultiple } from '../lib/compare';
 
 type SortKey = 'name' | 'codec' | 'useCount' | 'bytesSaved' | 'avgPct' | 'lastUsed';
 
@@ -24,8 +24,9 @@ export function StatsView() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
-  const realWorld = formatComparison(Math.max(0, s.totalBytesSaved));
-  const realWorldParts = formatComparisonParts(Math.max(0, s.totalBytesSaved));
+  // Rolled once per dashboard mount so the card and the strip agree, and a
+  // fresh reference appears each time you open the dashboard.
+  const [comparison] = useState(() => pickComparison(Math.max(0, s.totalBytesSaved)));
   const mostUsedPreset = [...ps].sort((a, b) => b.useCount - a.useCount)[0];
   const mostUsedFormat = CODEC_IDS.map((id) => ({ id, ...s.byFormat[id] }))
     .sort((a, b) => b.count - a.count)
@@ -87,6 +88,27 @@ export function StatsView() {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
+  const cards = (
+    <>
+      <Card label="Compressions" value={String(s.totalCompressions)} />
+      <Card
+        label="Bytes saved"
+        value={formatBytes(Math.max(0, s.totalBytesSaved))}
+        sub={s.totalCompressions > 0 ? `≈ ${formatBytes(Math.max(0, s.totalBytesSaved) / s.totalCompressions)} per image` : undefined}
+      />
+      <Card
+        label="Total processed"
+        value={formatBytes(s.totalBytesIn)}
+        sub={`→ ${formatBytes(s.totalBytesOut)}`}
+      />
+      <Card
+        label="Most-used"
+        value={mostUsedPreset ? mostUsedPreset.name : mostUsedFormat ? CODECS[mostUsedFormat.id].name : '—'}
+        sub={mostUsedPreset ? `${mostUsedPreset.useCount}× preset` : mostUsedFormat ? `${mostUsedFormat.count}× format` : undefined}
+      />
+    </>
+  );
+
   return (
     <div class="px-6 lg:px-8 pb-6 max-w-7xl mx-auto">
       <header class="flex items-center justify-between mb-5">
@@ -127,25 +149,42 @@ export function StatsView() {
         </div>
       ) : (
         <div class="space-y-5">
-          {/* Top cards */}
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card label="Compressions" value={String(s.totalCompressions)} />
-            <Card
-              label="Bytes saved"
-              value={formatBytes(Math.max(0, s.totalBytesSaved))}
-              sub={realWorld ? `≈ ${realWorld}` : undefined}
-            />
-            <Card
-              label="Total processed"
-              value={formatBytes(s.totalBytesIn)}
-              sub={`→ ${formatBytes(s.totalBytesOut)}`}
-            />
-            <Card
-              label="Most-used"
-              value={mostUsedPreset ? mostUsedPreset.name : mostUsedFormat ? CODECS[mostUsedFormat.id].name : '—'}
-              sub={mostUsedPreset ? `${mostUsedPreset.useCount}× preset` : mostUsedFormat ? `${mostUsedFormat.count}× format` : undefined}
-            />
-          </div>
+          {/* Full-width brand hero with the 2×2 stat cards nested on the right */}
+          {comparison ? (
+            <section class="relative rounded-2xl p-6 shadow-sm text-white bg-gradient-to-br from-brand to-brand-strong">
+              {/* Header floats top-left on desktop (out of flow) so it doesn't
+                  shift the vertical centering of the content below it. */}
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-white/70 mb-4 lg:mb-0 lg:absolute lg:top-6 lg:left-6">
+                In real-world terms
+              </h3>
+              <div class="grid lg:grid-cols-2 gap-6 items-center">
+                {/* Hero content — vertically centered, ignoring the title */}
+                <div class="flex items-center gap-5">
+                  {/* Icon display case — swap the emoji for a pixel-art <img>
+                      (image-rendering: pixelated) once we draw them. */}
+                  <div
+                    class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white/15 ring-1 ring-white/25 shadow-[0_0_30px_rgba(255,255,255,0.2)] text-5xl leading-none"
+                    aria-hidden="true"
+                  >
+                    {comparison.icon}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-6xl font-display font-bold tabular-nums leading-none">
+                      {formatMultiple(comparison.multiple)}×
+                    </p>
+                    <p class="mt-2.5">
+                      <span class="font-semibold">{comparison.label}</span>
+                      <span class="text-white/70"> of data saved</span>
+                    </p>
+                  </div>
+                </div>
+                {/* 2×2 stat cards nested on the right */}
+                <div class="grid grid-cols-2 gap-3">{cards}</div>
+              </div>
+            </section>
+          ) : (
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">{cards}</div>
+          )}
 
           {/* Format breakdown: donut + bars */}
           <section class="bg-surface rounded-2xl p-5 shadow-sm">
@@ -224,23 +263,6 @@ export function StatsView() {
               </div>
             </section>
           )}
-
-          {/* Real-world strip */}
-          {realWorldParts && (
-            <section class="bg-surface rounded-2xl p-5 shadow-sm">
-              <h3 class="text-sm font-semibold mb-3 text-muted">In real-world terms</h3>
-              <div class="flex items-center gap-4">
-                <span class="text-5xl leading-none" aria-hidden="true">{realWorldParts.icon}</span>
-                <p class="text-muted">
-                  You've saved{' '}
-                  <span class="text-3xl font-display font-semibold text-brand tabular-nums align-middle">
-                    {realWorldParts.multiple}×
-                  </span>{' '}
-                  <span class="font-medium text-ink">{realWorldParts.label}</span>{' '}of data.
-                </p>
-              </div>
-            </section>
-          )}
         </div>
       )}
     </div>
@@ -285,7 +307,7 @@ function Card({ label, value, sub }: { label: string; value: string; sub?: strin
   return (
     <div class="bg-surface rounded-2xl p-4 shadow-sm">
       <p class="text-xs uppercase tracking-wide text-faint font-medium">{label}</p>
-      <p class="text-2xl font-bold tracking-tight mt-1 truncate" title={value}>{value}</p>
+      <p class="text-2xl font-bold tracking-tight mt-1 truncate text-ink" title={value}>{value}</p>
       {sub && <p class="text-xs text-muted mt-1 truncate">{sub}</p>}
     </div>
   );
