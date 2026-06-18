@@ -1,7 +1,7 @@
 /** A reference quantity to phrase byte counts in fun, geeky terms (FF7 discs,
  * floppy disks, Apollo's computer, etc.). */
 export interface Reference {
-  /** Stable slug — also the key into PIXEL_ART (src/lib/pixelArt.ts). */
+  /** Stable slug — also the icon filename in src/assets/icons/ (see refIcons.ts). */
   id: string;
   label: string;
   size: number;
@@ -14,28 +14,23 @@ const MB = 1024 * 1024;
 const GB = 1024 * 1024 * 1024;
 
 export const REFERENCES: ReadonlyArray<Reference> = [
-  { id: 'tweet', label: 'tweet', size: 280, icon: '🐦' },
   { id: 'punchcard', label: 'punch card', size: 80, icon: '📇' },
   { id: 'apollo', label: 'Apollo 11 guidance computer', size: 4 * KB, icon: '🚀' },
   { id: 'atari', label: 'Atari 2600 cartridge', size: 4 * KB, icon: '🕹️' },
   { id: 'smb', label: 'copy of Super Mario Bros.', size: 40 * KB, icon: '🍄' },
-  { id: 'mac128k', label: 'Macintosh 128K’s memory', size: 128 * KB, icon: '🖥️' },
   { id: 'nes', label: 'NES cartridge', size: 256 * KB, icon: '🎮' },
   { id: 'pokemon', label: 'copy of Pokémon Red/Blue', size: 1 * MB, icon: '🔴' },
   { id: 'floppy', label: '3.5″ floppy disk', size: 1.44 * MB, icon: '💾' },
   { id: 'doom', label: 'DOOM (1993) install', size: 2.39 * MB, icon: '👹' },
-  { id: 'chronotrigger', label: 'copy of Chrono Trigger', size: 4 * MB, icon: '⏳' },
   { id: 'mp3', label: '3-min MP3 @ 320 kbps', size: 7 * MB, icon: '🎵' },
   { id: 'sm64', label: 'copy of Super Mario 64', size: 8 * MB, icon: '⭐' },
   { id: 'gameboy', label: 'Game Boy cartridge (max)', size: 8 * MB, icon: '👾' },
   { id: 'win95', label: 'Windows 95 install', size: 40 * MB, icon: '🪟' },
-  { id: 'quake', label: 'Quake (1996) install', size: 50 * MB, icon: '🔺' },
-  { id: 'n64', label: 'N64 cartridge (Conker)', size: 64 * MB, icon: '🎮' },
+  { id: 'encarta', label: 'copy of Encarta 98', size: 50 * MB, icon: '📚' },
+  { id: 'n64', label: 'N64 cartridge', size: 64 * MB, icon: '🎮' },
   { id: 'zipdisk', label: 'Zip disk', size: 100 * MB, icon: '💽' },
   { id: 'laserdisc', label: 'LaserDisc (per side)', size: 540 * MB, icon: '📀' },
   { id: 'ps1', label: 'PlayStation 1 disc', size: 700 * MB, icon: '💿' },
-  { id: 'ff7', label: 'copy of Final Fantasy VII (all 3 discs)', size: 3 * 660 * MB, icon: '⚔️' },
-  { id: 'ipodnano', label: 'iPod Nano (1st gen)', size: 1 * GB, icon: '🎧' },
   { id: 'switch', label: 'Nintendo Switch cartridge (max)', size: 32 * GB, icon: '🎴' },
   { id: 'dvd', label: 'DVD (single layer)', size: 4.7 * GB, icon: '📀' },
   { id: 'ipod', label: 'original iPod (2001)', size: 5 * GB, icon: '🎶' },
@@ -69,13 +64,6 @@ export function pickComparison(bytesSaved: number): Comparison | null {
   const pool = fitting.length > 0 ? fitting : [smallestReference()];
   const ref = pool[Math.floor(Math.random() * pool.length)]!;
   return toComparison(ref, bytesSaved);
-}
-
-/** Build a comparison for a specific reference id (used by the dev review
- * dropdown to preview any icon in the hero). */
-export function comparisonForId(id: string, bytesSaved: number): Comparison | null {
-  const ref = REFERENCES.find((r) => r.id === id);
-  return ref ? toComparison(ref, Math.max(0, bytesSaved)) : null;
 }
 
 function smallestReference(): Reference {

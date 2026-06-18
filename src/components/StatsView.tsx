@@ -4,9 +4,8 @@ import { presets } from '../state/presets';
 import { CODECS, CODEC_IDS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
 import { formatBytes, formatDeltaPct } from '../lib/format';
-import { pickComparison, comparisonForId, formatMultiple, REFERENCES } from '../lib/compare';
-import { PixelIcon } from './ui/PixelIcon';
-import { PIXEL_ART } from '../lib/pixelArt';
+import { pickComparison, formatMultiple } from '../lib/compare';
+import { iconForId } from '../lib/refIcons';
 
 type SortKey = 'name' | 'codec' | 'useCount' | 'bytesSaved' | 'avgPct' | 'lastUsed';
 
@@ -28,11 +27,8 @@ export function StatsView() {
 
   // Rolled once per dashboard mount so the card and the strip agree, and a
   // fresh reference appears each time you open the dashboard.
-  const [comparison] = useState(() => pickComparison(Math.max(0, s.totalBytesSaved)));
-  // Dev-only override to review any icon in the hero (tree-shaken in prod).
-  const [overrideId, setOverrideId] = useState('');
-  const shown = import.meta.env.DEV && overrideId ? comparisonForId(overrideId, s.totalBytesSaved) : comparison;
-  const shownArt = shown ? PIXEL_ART[shown.id] : undefined;
+  const shown = useState(() => pickComparison(Math.max(0, s.totalBytesSaved)))[0];
+  const shownIcon = shown ? iconForId(shown.id) : undefined;
   const mostUsedPreset = [...ps].sort((a, b) => b.useCount - a.useCount)[0];
   const mostUsedFormat = CODEC_IDS.map((id) => ({ id, ...s.byFormat[id] }))
     .sort((a, b) => b.count - a.count)
@@ -155,34 +151,6 @@ export function StatsView() {
         </div>
       ) : (
         <div class="space-y-5">
-          {/* Dev-only icon review: pick any reference to preview its icon in the
-              hero, with large zoom previews on light + brand backgrounds. */}
-          {import.meta.env.DEV && (
-            <div class="flex flex-wrap items-center gap-4 rounded-2xl border border-dashed border-border bg-surface p-4">
-              <span class="text-xs font-semibold uppercase tracking-wide text-faint">Dev · review icon</span>
-              <select
-                value={overrideId}
-                onChange={(e) => setOverrideId((e.currentTarget as HTMLSelectElement).value)}
-                class="text-sm bg-elevated text-ink rounded px-2 py-1.5 border border-border"
-              >
-                <option value="">Random</option>
-                {REFERENCES.map((r) => (
-                  <option key={r.id} value={r.id}>{PIXEL_ART[r.id] ? '✓ ' : '· '}{r.label}</option>
-                ))}
-              </select>
-              {shown && (
-                <div class="ml-auto flex items-center gap-3">
-                  <div class="w-28 h-28 grid place-items-center rounded-lg bg-bg text-6xl leading-none">
-                    {shownArt ? <PixelIcon art={shownArt} class="w-24 h-24" /> : shown.icon}
-                  </div>
-                  <div class="w-28 h-28 grid place-items-center rounded-lg bg-gradient-to-br from-brand to-brand-strong text-6xl leading-none">
-                    {shownArt ? <PixelIcon art={shownArt} class="w-24 h-24" /> : shown.icon}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Full-width brand hero with the 2×2 stat cards nested on the right */}
           {shown ? (
             <section class="relative rounded-2xl p-6 shadow-sm text-white bg-gradient-to-br from-brand to-brand-strong">
@@ -194,12 +162,12 @@ export function StatsView() {
               <div class="grid lg:grid-cols-2 gap-6 items-center">
                 {/* Hero content — vertically centered, ignoring the title */}
                 <div class="flex items-center gap-5">
-                  {/* Icon display case: pixel art when drawn, emoji fallback otherwise. */}
+                  {/* Icon display case: mapped icon when present, emoji fallback otherwise. */}
                   <div
                     class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white/15 ring-1 ring-white/25 shadow-[0_0_30px_rgba(255,255,255,0.2)] text-5xl leading-none overflow-hidden"
                     aria-hidden="true"
                   >
-                    {shownArt ? <PixelIcon art={shownArt} class="w-14 h-14" /> : shown.icon}
+                    {shownIcon ? <img src={shownIcon} alt="" class="w-14 h-14 object-contain" /> : shown.icon}
                   </div>
                   <div class="min-w-0">
                     <p class="text-6xl font-display font-bold tabular-nums leading-none">
