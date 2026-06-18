@@ -1,6 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { Wordmark } from './ui/Logo';
 import { importImageFiles } from '../lib/importImages';
+import { images } from '../state/images';
 import { navigate, route, type Route } from '../state/route';
 
 const LINKS: ReadonlyArray<{ id: Route; label: string }> = [
@@ -11,6 +12,9 @@ const LINKS: ReadonlyArray<{ id: Route; label: string }> = [
 
 export function Header() {
   const current = route.value;
+  // Show the quick-add everywhere except the empty home, which has its own big
+  // dropzone. On home with a queue it stands in for the queue's add button.
+  const showAdd = current !== 'home' || images.value.length > 0;
   return (
     <header class="sticky top-0 z-30 border-b border-border/60 bg-bg/80 backdrop-blur-md">
       <div class="px-6 lg:px-8 py-3 flex items-center justify-between gap-3 max-w-7xl mx-auto w-full">
@@ -22,14 +26,8 @@ export function Header() {
         >
           <Wordmark />
         </button>
-        <div class="flex items-center gap-3 sm:gap-4">
-          {/* Quick add from any page other than home (which has its own dropzone/queue). */}
-          {current !== 'home' && (
-            <>
-              <MiniDropzone />
-              <span class="h-6 w-px bg-border" aria-hidden="true" />
-            </>
-          )}
+        <div class="flex items-center gap-3 sm:gap-5">
+          {showAdd && <MiniDropzone />}
           <nav class="flex items-center gap-1 text-sm">
             {LINKS.map((l) => {
               const active = current === l.id;

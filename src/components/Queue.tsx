@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { importImageFiles } from '../lib/importImages';
 import { applyResizeMultiplierToAll, clearImages, decodingCount, images } from '../state/images';
 import { scheduleEncodeAll } from '../state/encode';
@@ -21,7 +21,6 @@ import { applyPresetToAll, getDefaultPreset } from '../state/presets';
 
 export function Queue() {
   const items = images.value;
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Land on the Presets tab when a default preset is set, so the user sees
@@ -62,12 +61,6 @@ export function Queue() {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer?.files.length) void handleFiles(e.dataTransfer.files);
-  }
-
-  function onChange(e: Event) {
-    const input = e.currentTarget as HTMLInputElement;
-    if (input.files?.length) void handleFiles(input.files);
-    input.value = '';
   }
 
   return (
@@ -118,21 +111,7 @@ export function Queue() {
                   Clear all
                 </button>
               )}
-              <button
-                class="px-3 py-1.5 text-sm bg-elevated text-ink rounded hover:bg-border transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                + Add images
-              </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.heic,.heif,.svg"
-              multiple
-              class="hidden"
-              onChange={onChange}
-            />
           </div>
           {error && <p class="mb-4 text-sm text-red-600">{error}</p>}
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
