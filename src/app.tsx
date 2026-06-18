@@ -18,10 +18,21 @@ export function App() {
 
   return (
     <div class="min-h-screen bg-bg text-ink flex flex-col">
+      {/* Focuses #main without touching the hash (we use hash routing). */}
+      <a
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById('main')?.focus();
+        }}
+        class="sr-only focus:not-sr-only focus:fixed focus:z-50 focus:top-3 focus:left-3 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-brand focus:text-white focus:shadow-lg"
+      >
+        Skip to content
+      </a>
       <Header />
-      <main class="flex-1">
+      <main id="main" tabIndex={-1} class="flex-1 outline-none">
         {view === 'dashboard' ? (
-          <StatsView />
+          <StatsView asPage />
         ) : view === 'privacy' ? (
           <PrivacyPage />
         ) : view === 'about' ? (

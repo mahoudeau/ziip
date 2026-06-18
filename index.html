@@ -3,9 +3,82 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Ziip: private image compressor and HEIC to JPG converter</title>
+    <meta
+      name="description"
+      content="Compress and convert images in your browser, including iPhone HEIC photos to JPG, WebP and AVIF. Images never leave your device. No uploads, no tracking."
+    />
+    <meta name="author" content="Mathieu Mahoudeau" />
+    <meta name="robots" content="index, follow" />
+    <meta
+      name="keywords"
+      content="image compressor, compress images, HEIC to JPG, HEIC converter, iPhone photos, iOS, HEIF, WebP, AVIF, JPEG XL, MozJPEG, PNG, private, no upload, offline"
+    />
+    <meta name="theme-color" content="#6c5ce7" />
+    <meta name="color-scheme" content="light" />
+    <link rel="canonical" href="https://ziip.mathieu.dev/" />
+
+    <!-- Icons + manifest -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="Local, browser-only image compression. All compression runs locally via WebAssembly. No backend, no uploads." />
-    <title>Ziip</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ziip" />
+    <meta property="og:title" content="Ziip: private image compressor and HEIC to JPG converter" />
+    <meta
+      property="og:description"
+      content="Compress and convert images in your browser, including iPhone HEIC photos to JPG, WebP and AVIF. Images never leave your device. No uploads, no tracking."
+    />
+    <meta property="og:url" content="https://ziip.mathieu.dev/" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://ziip.mathieu.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Ziip, private image compression that runs in your browser." />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Ziip: private image compressor and HEIC to JPG converter" />
+    <meta
+      name="twitter:description"
+      content="Compress and convert images in your browser, including iPhone HEIC photos to JPG, WebP and AVIF. Images never leave your device. No uploads, no tracking."
+    />
+    <meta name="twitter:image" content="https://ziip.mathieu.dev/og-image.png" />
+    <meta name="twitter:image:alt" content="Ziip, private image compression that runs in your browser." />
+
+    <!-- Apple / mobile web app -->
+    <meta name="apple-mobile-web-app-title" content="Ziip" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Ziip",
+        "url": "https://ziip.mathieu.dev/",
+        "description": "Private image compressor that runs in your browser. Shrink and convert JPEG, PNG, WebP, AVIF, JPEG XL and iPhone HEIC/HEIF photos with no uploads and no tracking.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires a modern browser with WebAssembly",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isAccessibleForFree": true,
+        "featureList": [
+          "Runs entirely in your browser, images never leave your device",
+          "No uploads, no tracking, no account",
+          "Reads JPEG, PNG, WebP, AVIF, GIF, BMP, SVG, HEIC and HEIF",
+          "Convert iPhone HEIC and HEIF photos to JPG, WebP or AVIF",
+          "Exports WebP, AVIF, JPEG XL, MozJPEG and PNG",
+          "Batch compression, crop, resize and presets",
+          "Side by side before and after comparison"
+        ],
+        "author": { "@type": "Person", "name": "Mathieu Mahoudeau", "url": "https://mathieu.dev" }
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

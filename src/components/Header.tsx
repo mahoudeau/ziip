@@ -28,7 +28,7 @@ export function Header() {
         </button>
         <div class="flex items-center gap-3 sm:gap-5">
           {showAdd && <MiniDropzone />}
-          <nav class="flex items-center gap-1 text-sm">
+          <nav aria-label="Primary" class="flex items-center gap-1 text-sm">
             {LINKS.map((l) => {
               const active = current === l.id;
               return (
@@ -68,8 +68,15 @@ function MiniDropzone() {
     <div
       role="button"
       tabIndex={0}
+      aria-label="Add images to compress"
       title="Drop or choose images to compress"
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);

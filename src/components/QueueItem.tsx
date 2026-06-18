@@ -37,8 +37,19 @@ export function QueueItem({ item }: Props) {
 
   return (
     <div
-      class="bg-surface rounded-xl overflow-hidden hover:ring-2 hover:ring-brand transition-all flex flex-col cursor-pointer"
+      role="button"
+      tabIndex={0}
+      aria-label={`Edit ${item.filename}`}
+      class="bg-surface rounded-xl overflow-hidden hover:ring-2 hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand transition-all flex flex-col cursor-pointer"
       onClick={() => selectImage(item.id)}
+      onKeyDown={(e) => {
+        // Only when focus is on the card itself, so Enter on the inner
+        // Download/Remove buttons doesn't also open the editor.
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          selectImage(item.id);
+        }
+      }}
     >
       <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
         <div class="flex items-center gap-1.5 min-w-0">

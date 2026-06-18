@@ -13,6 +13,8 @@ export function Wordmark({ class: className = '' }: { class?: string }) {
   return (
     <span class={`inline-flex items-center font-display font-semibold tracking-tight leading-none ${className}`}>
       <LogoMark class="h-[1.067em] w-[1.067em] shrink-0 text-brand -mr-[0.233em]" />
+      {/* The mark is the stylized "Z"; expose it to AT so the name reads "Ziip". */}
+      <span class="sr-only">Z</span>
       iip
     </span>
   );

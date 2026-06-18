@@ -46,6 +46,7 @@ export function DropZone() {
       >
         <h1 class="text-6xl text-ink text-center mb-3">
           <Wordmark />
+          <span class="sr-only">: private image compressor</span>
         </h1>
         <p class="text-muted mb-8 max-w-sm mx-auto">
           Drop images to compress them. Files never leave your device.
@@ -65,7 +66,11 @@ export function DropZone() {
           onChange={onChange}
         />
         {decodingCount.value > 0 && (
-          <p class="mt-6 flex items-center justify-center gap-2 text-sm text-muted">
+          <p
+            role="status"
+            aria-live="polite"
+            class="mt-6 flex items-center justify-center gap-2 text-sm text-muted"
+          >
             <Spinner size={14} />
             Decoding {decodingCount.value} image{decodingCount.value === 1 ? '' : 's'}…
           </p>

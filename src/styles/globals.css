@@ -9,7 +9,7 @@
 
   --color-ink: #1d1c24;         /* primary text */
   --color-muted: #5d5b69;       /* secondary text / labels */
-  --color-faint: #8a8794;       /* tertiary text / hints */
+  --color-faint: #6e6b7a;       /* tertiary text / hints (AA on bg) */
 
   --color-brand: #6c5ce7;       /* zippy violet — primary actions, accents */
   --color-brand-strong: #5a48d6;/* hover for brand */
@@ -31,4 +31,11 @@ body {
   font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Visible keyboard focus across the app. Pointer clicks don't trigger
+   :focus-visible, so this only shows for keyboard/AT users. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }

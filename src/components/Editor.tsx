@@ -540,9 +540,9 @@ function CropControls({
         </select>
         {aspectId === 'custom' && (
           <div class="flex items-center gap-2 mt-2">
-            <NudgeInput value={customW} onChange={(v) => onCustomChange(v, customH)} min={1} max={9999} />
+            <NudgeInput value={customW} onChange={(v) => onCustomChange(v, customH)} min={1} max={9999} ariaLabel="Custom aspect ratio width" />
             <span class="text-faint">:</span>
-            <NudgeInput value={customH} onChange={(v) => onCustomChange(customW, v)} min={1} max={9999} />
+            <NudgeInput value={customH} onChange={(v) => onCustomChange(customW, v)} min={1} max={9999} ariaLabel="Custom aspect ratio height" />
           </div>
         )}
       </div>
@@ -669,11 +669,11 @@ function ResizeControls({
       <div class="grid grid-cols-2 gap-2">
         <label class="flex items-center gap-1.5">
           <span class="text-xs text-faint w-3">W</span>
-          <NudgeInput value={curW} onChange={setWidth} min={1} max={20000} />
+          <NudgeInput value={curW} onChange={setWidth} min={1} max={20000} ariaLabel="Resize width in pixels" />
         </label>
         <label class="flex items-center gap-1.5">
           <span class="text-xs text-faint w-3">H</span>
-          <NudgeInput value={curH} onChange={setHeight} min={1} max={20000} />
+          <NudgeInput value={curH} onChange={setHeight} min={1} max={20000} ariaLabel="Resize height in pixels" />
         </label>
       </div>
       <p class="text-xs text-faint">
@@ -694,10 +694,16 @@ function FieldInput({
   onChange: (v: number) => void;
   disabled?: boolean;
 }) {
+  const CROP_FIELD_NAMES: Record<string, string> = {
+    X: 'Crop X position',
+    Y: 'Crop Y position',
+    W: 'Crop width',
+    H: 'Crop height',
+  };
   return (
     <label class={`flex items-center gap-1.5 ${disabled ? 'opacity-50' : ''}`}>
       <span class="text-xs text-faint w-3">{label}</span>
-      <NudgeInput value={value} onChange={onChange} disabled={disabled} />
+      <NudgeInput value={value} onChange={onChange} disabled={disabled} ariaLabel={CROP_FIELD_NAMES[label] ?? label} />
     </label>
   );
 }
@@ -708,12 +714,14 @@ function NudgeInput({
   min,
   max,
   disabled,
+  ariaLabel,
 }: {
   value: number;
   onChange: (v: number) => void;
   min?: number;
   max?: number;
   disabled?: boolean;
+  ariaLabel?: string;
 }) {
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -732,6 +740,7 @@ function NudgeInput({
       type="number"
       value={value}
       disabled={disabled}
+      aria-label={ariaLabel}
       onInput={(e) => {
         const v = parseInt((e.currentTarget as HTMLInputElement).value, 10);
         if (!Number.isNaN(v)) onChange(v);

@@ -40,7 +40,7 @@ export function BatchActionBar() {
           <span>
             <span class="text-faint">Format:</span> {meta.name}
           </span>
-          <span>
+          <span role="status" aria-live="polite">
             <span class="text-faint">Done:</span> {doneItems.length} / {items.length}
           </span>
           {totalOut > 0 && (
@@ -54,6 +54,7 @@ export function BatchActionBar() {
             <div class="flex items-center gap-2 mr-1">
               <span class="text-xs text-muted">Clear {items.length} image{items.length === 1 ? '' : 's'}?</span>
               <button
+                autofocus
                 onClick={() => {
                   clearImages();
                   setConfirmingClear(false);

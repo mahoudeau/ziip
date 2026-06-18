@@ -154,7 +154,13 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
       onPointerCancel={onContainerUp}
       onKeyDown={onKeyDown}
       tabIndex={0}
-      aria-label="Compare slider — click and drag to pan; drag the divider to compare"
+      role="slider"
+      aria-label="Before and after comparison. Use the arrow keys to move the divider."
+      aria-orientation="horizontal"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pos * 100)}
+      aria-valuetext={`${Math.round(pos * 100)}% revealed`}
     >
       {/* Invisible reference box at the image's rest position — the viewer uses
           it as the transform origin for cursor-anchored zoom. */}
@@ -236,6 +242,8 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
       {/* Encoding pill — vertically centred, in the encoded half. */}
       {encoding && fitDims.w > 0 && (
         <div
+          role="status"
+          aria-live="polite"
           class="absolute flex items-center gap-2 px-3 py-1.5 bg-black/75 text-white text-xs rounded-full pointer-events-none backdrop-blur-sm shadow-lg whitespace-nowrap"
           style={`left: ${pillLeft}px; top: 50%; transform: translate(-50%, -50%);`}
         >

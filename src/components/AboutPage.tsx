@@ -16,7 +16,7 @@ const INPUT_FORMATS = ['JPEG', 'PNG', 'WebP', 'AVIF', 'GIF', 'BMP', 'SVG (raster
 export function AboutPage() {
   return (
     <div class="px-6 lg:px-8 pt-4 pb-16 max-w-3xl mx-auto">
-      <h2 class="text-3xl font-display font-semibold tracking-tight mb-3">What is Ziip?</h2>
+      <h1 class="text-3xl font-display font-semibold tracking-tight mb-3">What is Ziip?</h1>
       <p class="text-muted text-lg mb-8">
         Ziip is a fast, private image compressor that runs entirely in your browser. Shrink
         photos and graphics to modern formats, with no uploads, no limits, and no fuss.

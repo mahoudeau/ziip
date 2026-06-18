@@ -76,18 +76,23 @@ export function Queue() {
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div>
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold flex items-center gap-2">
+            <h1 class="text-lg font-semibold flex items-center gap-2">
               {items.length} image{items.length === 1 ? '' : 's'}
               {decodingCount.value > 0 && (
-                <span class="flex items-center gap-1.5 text-sm font-normal text-muted">
+                <span
+                  role="status"
+                  aria-live="polite"
+                  class="flex items-center gap-1.5 text-sm font-normal text-muted"
+                >
                   <Spinner size={13} /> decoding {decodingCount.value}…
                 </span>
               )}
-            </h2>
+            </h1>
             <div class="flex items-center gap-2">
               {confirmingClear ? (
                 <>
                   <button
+                    autofocus
                     class="px-3 py-1.5 text-sm rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
                     onClick={() => {
                       clearImages();

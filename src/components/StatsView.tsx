@@ -11,14 +11,14 @@ type SortKey = 'name' | 'codec' | 'useCount' | 'bytesSaved' | 'avgPct' | 'lastUs
 
 /** Distinct hue per codec, shared by the donut and the bars. */
 const FORMAT_COLORS: Record<CodecId, string> = {
-  mozjpeg: '#6c5ce7',
-  webp: '#f59e0b',
-  avif: '#10b981',
+  mozjpeg: '#f59e0b',
+  webp: '#10b981',
+  avif: '#6c5ce7',
   jxl: '#0ea5e9',
   oxipng: '#f43f5e',
 };
 
-export function StatsView() {
+export function StatsView({ asPage = false }: { asPage?: boolean } = {}) {
   const s = stats.value;
   const ps = presets.value;
   const [sortKey, setSortKey] = useState<SortKey>('useCount');
@@ -114,11 +114,16 @@ export function StatsView() {
   return (
     <div class="px-6 lg:px-8 pb-6 max-w-7xl mx-auto">
       <header class="flex items-center justify-between mb-5">
-        <h2 class="text-2xl font-display font-semibold tracking-tight">Dashboard</h2>
+        {asPage ? (
+          <h1 class="text-2xl font-display font-semibold tracking-tight">Dashboard</h1>
+        ) : (
+          <h2 class="text-2xl font-display font-semibold tracking-tight">Dashboard</h2>
+        )}
         {s.totalCompressions > 0 &&
           (confirmingClear ? (
             <div class="flex items-center gap-2">
               <button
+                autofocus
                 class="px-3 py-1.5 text-xs rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
                 onClick={() => {
                   clearStats();
@@ -164,7 +169,7 @@ export function StatsView() {
                 <div class="flex items-center gap-5">
                   {/* Icon display case: mapped icon when present, emoji fallback otherwise. */}
                   <div
-                    class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white/15 ring-1 ring-white/25 shadow-[0_0_30px_rgba(255,255,255,0.2)] text-5xl leading-none overflow-hidden"
+                    class="shrink-0 grid place-items-center w-20 h-20 rounded-2xl bg-white ring-1 ring-black/5 shadow-lg text-5xl leading-none overflow-hidden"
                     aria-hidden="true"
                   >
                     {shownIcon ? <img src={shownIcon} alt="" class="w-14 h-14 object-contain" /> : shown.icon}
@@ -212,7 +217,7 @@ export function StatsView() {
                       />
                     </div>
                     <span class="w-32 shrink-0 text-right text-xs text-muted tabular-nums">
-                      {e.count} · saved {formatBytes(Math.max(0, e.saved))}
+                      {e.count} · {e.saved >= 0 ? `saved ${formatBytes(e.saved)}` : `grew ${formatBytes(-e.saved)}`}
                     </span>
                   </div>
                 ))}

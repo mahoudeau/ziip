@@ -5,7 +5,7 @@ import { GitHubIcon } from './ui/icons';
 export function PrivacyPage() {
   return (
     <div class="px-6 lg:px-8 pt-4 pb-16 max-w-3xl mx-auto">
-      <h2 class="text-3xl font-display font-semibold tracking-tight mb-3">Your privacy</h2>
+      <h1 class="text-3xl font-display font-semibold tracking-tight mb-3">Your privacy</h1>
       <p class="text-muted text-lg mb-8">
         Ziip is 100% private by design. Your images are compressed entirely on your own
         device. They’re never uploaded, and there’s no server to upload them to.

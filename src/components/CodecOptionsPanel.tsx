@@ -1,3 +1,4 @@
+import { useId } from 'preact/hooks';
 import type { CodecMeta, OptionDef } from '../codecs/types';
 
 interface Props {
@@ -29,24 +30,29 @@ function OptionControl({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
+  const id = useId();
+  const hintId = opt.hint ? `${id}-hint` : undefined;
+
   if (opt.kind === 'range') {
     const num = typeof value === 'number' ? value : 0;
     return (
       <div>
         <div class="flex justify-between items-baseline mb-1.5">
-          <label class="text-sm font-medium">{opt.label}</label>
+          <label for={id} class="text-sm font-medium">{opt.label}</label>
           <span class="text-sm tabular-nums text-muted">{num}</span>
         </div>
         <input
+          id={id}
           type="range"
           min={opt.min}
           max={opt.max}
           step={opt.step ?? 1}
           value={num}
+          aria-describedby={hintId}
           onInput={(e) => onChange(parseFloat((e.currentTarget as HTMLInputElement).value))}
           class="w-full accent-brand"
         />
-        {opt.hint && <p class="text-xs text-faint mt-1">{opt.hint}</p>}
+        {opt.hint && <p id={hintId} class="text-xs text-faint mt-1">{opt.hint}</p>}
       </div>
     );
   }
@@ -58,12 +64,13 @@ function OptionControl({
           <input
             type="checkbox"
             checked={Boolean(value)}
+            aria-describedby={hintId}
             onChange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
             class="accent-brand"
           />
           <span class="text-sm font-medium">{opt.label}</span>
         </label>
-        {opt.hint && <p class="text-xs text-faint mt-1 ml-6">{opt.hint}</p>}
+        {opt.hint && <p id={hintId} class="text-xs text-faint mt-1 ml-6">{opt.hint}</p>}
       </div>
     );
   }
@@ -71,9 +78,11 @@ function OptionControl({
   // select
   return (
     <div>
-      <label class="block text-sm font-medium mb-1.5">{opt.label}</label>
+      <label for={id} class="block text-sm font-medium mb-1.5">{opt.label}</label>
       <select
+        id={id}
         value={String(value ?? '')}
+        aria-describedby={hintId}
         onChange={(e) => {
           const raw = (e.currentTarget as HTMLSelectElement).value;
           const choice = opt.choices.find((c) => String(c.value) === raw);
@@ -87,7 +96,7 @@ function OptionControl({
           </option>
         ))}
       </select>
-      {opt.hint && <p class="text-xs text-faint mt-1">{opt.hint}</p>}
+      {opt.hint && <p id={hintId} class="text-xs text-faint mt-1">{opt.hint}</p>}
     </div>
   );
 }

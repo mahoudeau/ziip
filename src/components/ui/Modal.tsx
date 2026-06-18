@@ -1,4 +1,4 @@
-import { useEffect } from 'preact/hooks';
+import { useEffect, useId, useRef } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 
 interface Props {
@@ -7,17 +7,56 @@ interface Props {
   children: ComponentChildren;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ title, onClose, children }: Props) {
-  // Close on Escape from anywhere; the modal owns the key handler while open.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+
+    const focusables = (): HTMLElement[] =>
+      dialog
+        ? Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+            (el) => el.offsetParent !== null,
+          )
+        : [];
+
+    // Move focus into the dialog (the first field, else the dialog itself).
+    (focusables()[0] ?? dialog)?.focus();
+
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      // Trap Tab focus within the dialog.
+      const els = focusables();
+      if (els.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = els[0]!;
+      const last = els[els.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     }
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      previouslyFocused?.focus?.();
+    };
   }, [onClose]);
 
   return (
@@ -26,11 +65,16 @@ export function Modal({ title, onClose, children }: Props) {
       onClick={onClose}
     >
       <div
-        class="bg-surface border border-border rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        class="bg-surface border border-border rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <header class="flex items-center justify-between px-5 py-3 border-b border-border">
-          <h2 class="text-base font-semibold">{title}</h2>
+          <h2 id={titleId} class="text-base font-semibold">{title}</h2>
           <button
             type="button"
             onClick={onClose}
