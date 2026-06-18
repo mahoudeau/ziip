@@ -2,10 +2,10 @@ import { CODEC_IDS, CODECS } from '../codecs/registry';
 
 const FEATURES: ReadonlyArray<[string, string]> = [
   ['Batch workflow', 'Drop, paste, or pick many images and compress them all at once.'],
-  ['Five codecs', 'MozJPEG, WebP, AVIF, JPEG XL and OxiPNG — choose per image or for the whole queue.'],
+  ['Five codecs', 'MozJPEG, WebP, AVIF, JPEG XL and OxiPNG. Choose per image or for the whole queue.'],
   ['Presets', 'Save your favourite settings, reuse them, and track how much space they’ve saved.'],
   ['Crop', 'Pixel-precise crop with aspect-ratio locks and a live grid at high zoom.'],
-  ['Resize', '×0.25–×3 presets or a custom width/height, with aspect ratio always locked.'],
+  ['Resize', 'Quick ×0.25 to ×3 presets, or a custom width and height with aspect ratio always locked.'],
   ['Compare', 'Side-by-side before/after slider with pan and zoom.'],
   ['Dashboard', 'Total bytes saved, a format breakdown, and fun real-world comparisons.'],
   ['Download', 'Grab images one at a time or all together as a single zip.'],
@@ -19,7 +19,7 @@ export function AboutPage() {
       <h2 class="text-3xl font-display font-semibold tracking-tight mb-3">What is Ziip?</h2>
       <p class="text-muted text-lg mb-8">
         Ziip is a fast, private image compressor that runs entirely in your browser. Shrink
-        photos and graphics to modern formats — no uploads, no limits, no fuss.
+        photos and graphics to modern formats, with no uploads, no limits, and no fuss.
       </p>
 
       <section class="bg-surface rounded-2xl p-6 shadow-sm mb-4">

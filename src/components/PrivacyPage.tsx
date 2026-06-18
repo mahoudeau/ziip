@@ -8,12 +8,12 @@ export function PrivacyPage() {
       <h2 class="text-3xl font-display font-semibold tracking-tight mb-3">Your privacy</h2>
       <p class="text-muted text-lg mb-8">
         Ziip is 100% private by design. Your images are compressed entirely on your own
-        device — they’re never uploaded, and there’s no server to upload them to.
+        device. They’re never uploaded, and there’s no server to upload them to.
       </p>
 
       <Section title="In plain terms">
         <ul class="space-y-2.5 text-muted">
-          <Li>Your files never leave your device — no uploads, ever.</Li>
+          <Li>Your files never leave your device. No uploads, ever.</Li>
           <Li>There’s no backend, no account, and no sign-in.</Li>
           <Li>No analytics, no tracking, no cookies.</Li>
           <Li>After the first load, it keeps working offline.</Li>
@@ -27,7 +27,7 @@ export function PrivacyPage() {
             of Squoosh’s), on background Web Workers.
           </Li>
           <Li>
-            HEIC/HEIF photos are decoded locally with a WebAssembly build of libheif — still
+            HEIC/HEIF photos are decoded locally with a WebAssembly build of libheif. Still
             no upload.
           </Li>
           <Li>
@@ -35,7 +35,7 @@ export function PrivacyPage() {
             CSS, Wasm). After that, nothing is sent anywhere.
           </Li>
           <Li>
-            Your presets and stats live only in this browser’s localStorage — never
+            Your presets and stats live only in this browser’s localStorage, and are never
             transmitted.
           </Li>
         </ul>
@@ -43,7 +43,7 @@ export function PrivacyPage() {
 
       <Section title="Don’t take our word for it">
         <p class="text-muted mb-4">
-          Ziip is open source. You can read exactly what runs — there’s nowhere for your
+          Ziip is open source. You can read exactly what runs. There’s nowhere for your
           images to go.
         </p>
         <a
