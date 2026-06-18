@@ -34,8 +34,8 @@ export function BatchActionBar() {
   }
 
   return (
-    <div class="sticky bottom-0 z-20 border-t border-border bg-bg/95 backdrop-blur-sm px-6 py-3">
-      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+    <div class="sticky bottom-0 z-20 border-t border-border bg-bg/95 backdrop-blur-sm px-3 sm:px-6 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-x-3 gap-y-2 flex-wrap">
         <div class="text-xs text-muted tabular-nums flex items-center gap-3 flex-wrap">
           <span>
             <span class="text-faint">Format:</span> {meta.name}
@@ -49,7 +49,7 @@ export function BatchActionBar() {
             </span>
           )}
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {confirmingClear ? (
             <div class="flex items-center gap-2 mr-1">
               <span class="text-xs text-muted">Clear {items.length} image{items.length === 1 ? '' : 's'}?</span>
@@ -73,7 +73,7 @@ export function BatchActionBar() {
           ) : (
             <button
               onClick={() => setConfirmingClear(true)}
-              class="px-4 py-2 text-sm font-medium rounded text-muted hover:text-red-600 hover:bg-elevated transition-colors mr-1"
+              class="px-3 sm:px-4 py-2 text-sm font-medium rounded text-muted hover:text-red-600 hover:bg-elevated transition-colors whitespace-nowrap mr-1"
             >
               Clear all
             </button>
@@ -81,14 +81,14 @@ export function BatchActionBar() {
           <button
             onClick={downloadAll}
             disabled={doneItems.length === 0 || encoding || zipping}
-            class="px-4 py-2 bg-elevated text-ink text-sm font-medium rounded hover:bg-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="px-3 sm:px-4 py-2 bg-elevated text-ink text-sm font-medium rounded hover:bg-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
             Download all{!allDone && doneItems.length > 0 ? ` (${doneItems.length})` : ''}
           </button>
           <button
             onClick={downloadZip}
             disabled={doneItems.length === 0 || encoding || zipping}
-            class="px-4 py-2 bg-brand text-white text-sm font-medium rounded hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            class="px-3 sm:px-4 py-2 bg-brand text-white text-sm font-medium rounded hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 whitespace-nowrap"
           >
             {zipping && <Spinner size={12} />}
             {zipping ? 'Zipping…' : 'Download zip'}

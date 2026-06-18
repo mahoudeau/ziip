@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { stats, clearStats } from '../state/stats';
 import { presets } from '../state/presets';
 import { CODECS, CODEC_IDS } from '../codecs/registry';
@@ -90,26 +90,37 @@ export function StatsView({ asPage = false }: { asPage?: boolean } = {}) {
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  const cards = (
-    <>
-      <Card label="Compressions" value={String(s.totalCompressions)} />
-      <Card
-        label="Bytes saved"
-        value={formatBytes(Math.max(0, s.totalBytesSaved))}
-        sub={s.totalCompressions > 0 ? `≈ ${formatBytes(Math.max(0, s.totalBytesSaved) / s.totalCompressions)} per image` : undefined}
-      />
-      <Card
-        label="Total processed"
-        value={formatBytes(s.totalBytesIn)}
-        sub={`→ ${formatBytes(s.totalBytesOut)}`}
-      />
-      <Card
-        label="Most-used"
-        value={mostUsedPreset ? mostUsedPreset.name : mostUsedFormat ? CODECS[mostUsedFormat.id].name : '—'}
-        sub={mostUsedPreset ? `${mostUsedPreset.useCount}× preset` : mostUsedFormat ? `${mostUsedFormat.count}× format` : undefined}
-      />
-    </>
-  );
+  const items: StatItem[] = [
+    {
+      label: 'Compressions',
+      value: String(s.totalCompressions),
+      sub: s.firstUsedAt
+        ? `Since ${new Date(s.firstUsedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
+        : undefined,
+    },
+    {
+      label: 'Bytes saved',
+      value: formatBytes(Math.max(0, s.totalBytesSaved)),
+      sub:
+        s.totalCompressions > 0
+          ? `≈ ${formatBytes(Math.max(0, s.totalBytesSaved) / s.totalCompressions)} per image`
+          : undefined,
+    },
+    {
+      label: 'Total processed',
+      value: formatBytes(s.totalBytesIn),
+      sub: `→ ${formatBytes(s.totalBytesOut)}`,
+    },
+    {
+      label: 'Most-used',
+      value: mostUsedPreset ? mostUsedPreset.name : mostUsedFormat ? CODECS[mostUsedFormat.id].name : '—',
+      sub: mostUsedPreset
+        ? `${mostUsedPreset.useCount} times`
+        : mostUsedFormat
+          ? `${mostUsedFormat.count} times`
+          : undefined,
+    },
+  ];
 
   return (
     <div class="px-6 lg:px-8 pb-6 max-w-7xl mx-auto">
@@ -175,21 +186,19 @@ export function StatsView({ asPage = false }: { asPage?: boolean } = {}) {
                     {shownIcon ? <img src={shownIcon} alt="" class="w-14 h-14 object-contain" /> : shown.icon}
                   </div>
                   <div class="min-w-0">
-                    <p class="text-6xl font-display font-bold tabular-nums leading-none">
-                      {formatMultiple(shown.multiple)}×
+                    <p class="text-sm font-semibold text-white/80">You saved</p>
+                    <p class="text-6xl font-display font-bold tabular-nums leading-none mt-0.5">
+                      ×{formatMultiple(shown.multiple)}
                     </p>
-                    <p class="mt-2.5">
-                      <span class="font-semibold">{shown.label}</span>
-                      <span class="text-white/70"> of data saved</span>
-                    </p>
+                    <p class="mt-2 font-semibold">{shown.label}</p>
                   </div>
                 </div>
                 {/* 2×2 stat cards nested on the right */}
-                <div class="grid grid-cols-2 gap-3">{cards}</div>
+                <StatCards items={items} grid="grid grid-cols-2 gap-3" />
               </div>
             </section>
           ) : (
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">{cards}</div>
+            <StatCards items={items} grid="grid grid-cols-2 lg:grid-cols-4 gap-3" />
           )}
 
           {/* Format breakdown: donut + bars */}
@@ -309,12 +318,88 @@ function FormatDonut({
   );
 }
 
-function Card({ label, value, sub }: { label: string; value: string; sub?: string }) {
+interface StatItem {
+  label: string;
+  value: string;
+  sub?: string;
+}
+
+/** Stat cards sharing ONE dynamically-fitted value font size: each value is
+ * measured and the largest size at which they all fit their equal-width cards
+ * is applied to all four, so the numbers stay aligned and never truncate. */
+function StatCards({ items, grid }: { items: StatItem[]; grid: string }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const valueRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const subRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const [valuePx, setValuePx] = useState(24);
+  const [subPx, setSubPx] = useState(12);
+  const lastWidth = useRef(0);
+
+  useLayoutEffect(() => {
+    // Largest size (≤ max, ≥ min) at which every element in the group fits its
+    // equal-width card, so the cards stay uniform and nothing truncates.
+    function fitGroup(els: (HTMLParagraphElement | null)[], max: number, min: number): number {
+      let best = max;
+      for (const el of els) {
+        if (!el || el.clientWidth === 0) continue;
+        const prev = el.style.fontSize;
+        el.style.fontSize = `${max}px`;
+        const ratio = el.clientWidth / el.scrollWidth;
+        el.style.fontSize = prev;
+        if (ratio < 1) best = Math.min(best, Math.max(min, Math.floor(max * ratio)));
+      }
+      return best;
+    }
+    function fit() {
+      setValuePx(fitGroup(valueRefs.current, 24, 13));
+      setSubPx(fitGroup(subRefs.current, 12, 9));
+    }
+    fit();
+    const gridEl = gridRef.current;
+    if (!gridEl) return;
+    lastWidth.current = gridEl.clientWidth;
+    // Refit only on container WIDTH change — ignore the height change the font
+    // resize itself causes, which would otherwise loop.
+    const ro = new ResizeObserver(() => {
+      const w = gridEl.clientWidth;
+      if (w !== lastWidth.current) {
+        lastWidth.current = w;
+        fit();
+      }
+    });
+    ro.observe(gridEl);
+    return () => ro.disconnect();
+  }, [items.map((i) => `${i.label}:${i.value}:${i.sub ?? ''}`).join('|')]);
+
   return (
-    <div class="bg-surface rounded-2xl p-4 shadow-sm">
-      <p class="text-xs uppercase tracking-wide text-faint font-medium">{label}</p>
-      <p class="text-2xl font-bold tracking-tight mt-1 truncate text-ink" title={value}>{value}</p>
-      {sub && <p class="text-xs text-muted mt-1 truncate">{sub}</p>}
+    <div ref={gridRef} class={grid}>
+      {items.map((it, i) => (
+        <div key={it.label} class="bg-surface rounded-2xl p-4 shadow-sm">
+          <p class="text-xs uppercase tracking-wide text-faint font-medium min-h-[2lh]">{it.label}</p>
+          <p
+            ref={(el) => {
+              valueRefs.current[i] = el;
+            }}
+            class="font-bold tracking-tight mt-1 truncate text-ink leading-tight"
+            style={`font-size:${valuePx}px`}
+            title={it.value}
+          >
+            {it.value}
+          </p>
+          {it.sub && (
+            <p
+              ref={(el) => {
+                subRefs.current[i] = el;
+              }}
+              class="text-muted mt-1 truncate leading-tight"
+              style={`font-size:${subPx}px`}
+              title={it.sub}
+            >
+              {it.sub}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

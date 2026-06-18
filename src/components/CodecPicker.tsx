@@ -20,14 +20,14 @@ export function CodecPicker({ value, showingPresets, onSelectCodec, onSelectPres
           <button
             key={id}
             onClick={() => onSelectCodec(id)}
-            class={`px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
+            class={`px-0.5 sm:px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
               active
                 ? 'bg-brand text-white'
                 : 'text-muted hover:text-ink hover:bg-border/50'
             }`}
           >
-            <span class="text-sm font-bold uppercase">{meta.outputExt}</span>
-            <span class={`text-[10px] mt-0.5 whitespace-nowrap ${active ? 'text-white/70' : 'opacity-70'}`}>
+            <span class="text-[11px] sm:text-sm font-bold uppercase">{meta.outputExt}</span>
+            <span class={`text-[9px] sm:text-[10px] mt-0.5 ${active ? 'text-white/70' : 'opacity-70'}`}>
               {meta.name}
             </span>
           </button>
@@ -36,14 +36,14 @@ export function CodecPicker({ value, showingPresets, onSelectCodec, onSelectPres
       <button
         key="presets"
         onClick={onSelectPresets}
-        class={`px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
+        class={`px-0.5 sm:px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
           showingPresets
             ? 'bg-brand text-white'
             : 'text-muted hover:text-ink hover:bg-border/50'
         }`}
       >
-        <span class="text-sm font-bold uppercase">Saved</span>
-        <span class={`text-[10px] mt-0.5 whitespace-nowrap ${showingPresets ? 'text-white/70' : 'opacity-70'}`}>
+        <span class="text-[11px] sm:text-sm font-bold uppercase">Saved</span>
+        <span class={`text-[9px] sm:text-[10px] mt-0.5 ${showingPresets ? 'text-white/70' : 'opacity-70'}`}>
           Presets
         </span>
       </button>

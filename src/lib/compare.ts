@@ -70,7 +70,21 @@ function smallestReference(): Reference {
   return REFERENCES.reduce((min, r) => (r.size < min.size ? r : min));
 }
 
-/** Multiples read as 1 decimal up to 10×, integers above. */
+/** Multiples read as 1 decimal up to 10×, integers up to 1000×, then abbreviated
+ * with K / M / B / T so the hero number stays compact (e.g. 37064 → "37.1K"). */
 export function formatMultiple(m: number): string {
-  return m <= 10 ? m.toFixed(1) : Math.round(m).toString();
+  if (m <= 10) return m.toFixed(1);
+  if (m < 1000) return Math.round(m).toString();
+  for (const [value, suffix] of [
+    [1e12, 'T'],
+    [1e9, 'B'],
+    [1e6, 'M'],
+    [1e3, 'K'],
+  ] as const) {
+    if (m >= value) {
+      const n = m / value;
+      return (n < 100 ? n.toFixed(1) : Math.round(n).toString()) + suffix;
+    }
+  }
+  return Math.round(m).toString();
 }
