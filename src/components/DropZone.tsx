@@ -1,6 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
 import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
-import { LogoMark } from './ui/Logo';
+import { Wordmark } from './ui/Logo';
 import { Spinner } from './ui/Spinner';
 import { addImage, decodingCount } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
@@ -74,10 +74,9 @@ export function DropZone() {
             : 'border-border bg-surface/60 hover:border-brand/50'
         }`}
       >
-        <div class="flex items-center justify-center gap-3 mb-3">
-          <LogoMark class="w-14 h-14 text-brand" />
-          <h1 class="text-6xl font-display font-semibold tracking-tight">Ziip</h1>
-        </div>
+        <h1 class="text-6xl text-ink text-center mb-3">
+          <Wordmark />
+        </h1>
         <p class="text-muted mb-8 max-w-sm mx-auto">
           Drop images to compress them. Files never leave your device.
         </p>

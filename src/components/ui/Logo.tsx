@@ -3,6 +3,21 @@
  * (public/images/logos/ziip-mark.svg). Fills inherit `currentColor` so the
  * mark recolors with the surrounding text color.
  */
+/**
+ * The Ziip wordmark: the Z mark stands in for the initial letter, followed by
+ * "iip". Everything sizes off the inherited font-size (set a `text-*` class on
+ * this element or a parent), so the header and hero versions stay identical at
+ * any scale. `leading-none` keeps vertical alignment consistent across sizes.
+ */
+export function Wordmark({ class: className = '' }: { class?: string }) {
+  return (
+    <span class={`inline-flex items-center font-display font-semibold tracking-tight leading-none ${className}`}>
+      <LogoMark class="h-[1.067em] w-[1.067em] shrink-0 text-brand -mr-[0.233em]" />
+      iip
+    </span>
+  );
+}
+
 export function LogoMark({ class: className }: { class?: string }) {
   return (
     <svg viewBox="0 0 120 120" fill="currentColor" class={className} aria-hidden="true">
