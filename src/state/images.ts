@@ -12,6 +12,13 @@ export interface EncodedResult {
   msElapsed: number;
 }
 
+/** Target output dimensions in pixels. Aspect ratio is always preserved by
+ * the UI; this is just the resolved size applied after crop, before encode. */
+export interface ResizeTarget {
+  width: number;
+  height: number;
+}
+
 export interface ImageItem {
   id: string;
   filename: string;
@@ -24,6 +31,8 @@ export interface ImageItem {
   codec: CodecId;
   options: Record<string, unknown>;
   crop?: CropRect;
+  /** Optional resize applied after crop. Absent = keep (post-crop) size. */
+  resize?: ResizeTarget;
   /** Set when codec/options came from a preset. Cleared on any manual edit
    * to codec/options so we don't credit usage to a preset that no longer
    * matches what was actually encoded. */
@@ -69,6 +78,27 @@ export function selectImage(id: string | null): void {
 
 export function setCrop(id: string, crop: CropRect | undefined): void {
   updateImage(id, { crop, encoded: undefined, status: 'queued' });
+}
+
+export function setResize(id: string, resize: ResizeTarget | undefined): void {
+  updateImage(id, { resize, encoded: undefined, status: 'queued' });
+}
+
+/** Apply a scale multiplier to every image, relative to each image's own
+ * (post-crop) base size. `1` clears any resize. Caller schedules re-encode. */
+export function applyResizeMultiplierToAll(multiplier: number): void {
+  images.value = images.value.map((img) => {
+    const baseW = img.crop ? img.crop.width : img.originalImageData.width;
+    const baseH = img.crop ? img.crop.height : img.originalImageData.height;
+    const resize: ResizeTarget | undefined =
+      multiplier === 1
+        ? undefined
+        : {
+            width: Math.max(1, Math.round(baseW * multiplier)),
+            height: Math.max(1, Math.round(baseH * multiplier)),
+          };
+    return { ...img, resize, encoded: undefined, status: 'queued' as const };
+  });
 }
 
 export function getImage(id: string | null): ImageItem | null {

@@ -26,15 +26,15 @@ export function Modal({ title, onClose, children }: Props) {
       onClick={onClose}
     >
       <div
-        class="bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+        class="bg-surface border border-border rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <header class="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
+        <header class="flex items-center justify-between px-5 py-3 border-b border-border">
           <h2 class="text-base font-semibold">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            class="text-zinc-500 hover:text-zinc-100 transition-colors"
+            class="text-faint hover:text-ink transition-colors"
             aria-label="Close"
           >
             ✕

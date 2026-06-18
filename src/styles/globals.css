@@ -1,6 +1,34 @@
 @import "tailwindcss";
 
 @theme {
-  /* Reserved for ziip-specific design tokens (colors, fonts, shadows).
-     Filled in during Phase 7 polish. */
+  /* Playful light palette. Semantic tokens generate the bg, text and border utilities. */
+  --color-bg: #faf8f3;          /* warm off-white page */
+  --color-surface: #ffffff;     /* cards / panels */
+  --color-elevated: #f3f1ea;    /* inputs, secondary buttons */
+  --color-border: #e6e2d8;      /* hairlines, hover for elevated */
+
+  --color-ink: #1d1c24;         /* primary text */
+  --color-muted: #5d5b69;       /* secondary text / labels */
+  --color-faint: #8a8794;       /* tertiary text / hints */
+
+  --color-brand: #6c5ce7;       /* zippy violet — primary actions, accents */
+  --color-brand-strong: #5a48d6;/* hover for brand */
+  --color-accent: #f59e0b;      /* warm amber highlight */
+
+  /* Rounded, friendly display face for the wordmark + headings. */
+  --font-display: "Fredoka Variable", ui-rounded, "Segoe UI", system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

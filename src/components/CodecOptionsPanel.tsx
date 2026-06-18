@@ -35,7 +35,7 @@ function OptionControl({
       <div>
         <div class="flex justify-between items-baseline mb-1.5">
           <label class="text-sm font-medium">{opt.label}</label>
-          <span class="text-sm tabular-nums text-zinc-300">{num}</span>
+          <span class="text-sm tabular-nums text-muted">{num}</span>
         </div>
         <input
           type="range"
@@ -44,9 +44,9 @@ function OptionControl({
           step={opt.step ?? 1}
           value={num}
           onInput={(e) => onChange(parseFloat((e.currentTarget as HTMLInputElement).value))}
-          class="w-full accent-zinc-100"
+          class="w-full accent-brand"
         />
-        {opt.hint && <p class="text-xs text-zinc-500 mt-1">{opt.hint}</p>}
+        {opt.hint && <p class="text-xs text-faint mt-1">{opt.hint}</p>}
       </div>
     );
   }
@@ -59,11 +59,11 @@ function OptionControl({
             type="checkbox"
             checked={Boolean(value)}
             onChange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
-            class="accent-zinc-100"
+            class="accent-brand"
           />
           <span class="text-sm font-medium">{opt.label}</span>
         </label>
-        {opt.hint && <p class="text-xs text-zinc-500 mt-1 ml-6">{opt.hint}</p>}
+        {opt.hint && <p class="text-xs text-faint mt-1 ml-6">{opt.hint}</p>}
       </div>
     );
   }
@@ -79,7 +79,7 @@ function OptionControl({
           const choice = opt.choices.find((c) => String(c.value) === raw);
           if (choice) onChange(choice.value);
         }}
-        class="w-full bg-zinc-800 text-zinc-100 text-sm rounded px-2 py-1.5 border border-zinc-700"
+        class="w-full bg-elevated text-ink text-sm rounded px-2 py-1.5 border border-border"
       >
         {opt.choices.map((c) => (
           <option key={String(c.value)} value={String(c.value)}>
@@ -87,7 +87,7 @@ function OptionControl({
           </option>
         ))}
       </select>
-      {opt.hint && <p class="text-xs text-zinc-500 mt-1">{opt.hint}</p>}
+      {opt.hint && <p class="text-xs text-faint mt-1">{opt.hint}</p>}
     </div>
   );
 }

@@ -208,7 +208,7 @@ export function CropTool({
   return (
     <div
       ref={containerRef}
-      class="relative w-full h-full bg-zinc-900 rounded-xl overflow-hidden flex items-center justify-center"
+      class="relative w-full h-full bg-surface rounded-xl overflow-hidden flex items-center justify-center"
       style={`cursor: ${containerCursor}`}
     >
       <div
@@ -336,14 +336,14 @@ export function CropTool({
         class="absolute top-3 right-3 flex items-center gap-1 text-xs"
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div class="px-2 py-1 bg-black/60 text-zinc-100 rounded tabular-nums pointer-events-none">
+        <div class="px-2 py-1 bg-black/60 text-white rounded tabular-nums pointer-events-none">
           {Math.round(effectiveScale * 100)}% · {Math.round(sourceWidth)}×{Math.round(sourceHeight)}
         </div>
         <button
           onClick={viewer.fit}
           disabled={viewer.state.scale === 1 && viewer.state.tx === 0 && viewer.state.ty === 0}
           title="Fit to screen (0)"
-          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Fit
         </button>
@@ -351,7 +351,7 @@ export function CropTool({
           onClick={() => viewer.zoom100(sourceWidth, sourceHeight)}
           disabled={Math.abs(effectiveScale - 1) < 0.001}
           title="Zoom 1:1 (1)"
-          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           100%
         </button>

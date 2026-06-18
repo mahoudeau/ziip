@@ -1,41 +1,30 @@
-import { useState } from 'preact/hooks';
 import { images, selectedImageId } from './state/images';
 import { DropZone } from './components/DropZone';
 import { Editor } from './components/Editor';
 import { Queue } from './components/Queue';
 import { BatchActionBar } from './components/BatchActionBar';
 import { StatsView } from './components/StatsView';
+import { LogoMark } from './components/ui/Logo';
 
 export function App() {
   const items = images.value;
   const selectedId = selectedImageId.value;
   const inEditor = selectedId !== null;
   const hasItems = items.length > 0;
-  const [showingStats, setShowingStats] = useState(false);
 
   return (
-    <div class="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div class="min-h-screen bg-bg text-ink flex flex-col">
       <header class="px-6 lg:px-8 py-3 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <h1 class="text-2xl font-bold tracking-tight">Ziip</h1>
-        <button
-          type="button"
-          onClick={() => setShowingStats((v) => !v)}
-          class={`px-3 py-1.5 text-sm rounded transition-colors ${
-            showingStats
-              ? 'bg-zinc-100 text-zinc-900'
-              : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-          }`}
-        >
-          Stats
-        </button>
+        <h1 class="flex items-center gap-2 text-2xl font-display font-semibold tracking-tight text-brand">
+          <LogoMark class="w-7 h-7" />
+          <span class="text-ink">Ziip</span>
+        </h1>
       </header>
-      {showingStats ? (
-        <main class="flex-1">
-          <StatsView onClose={() => setShowingStats(false)} />
-        </main>
-      ) : !hasItems ? (
+      {!hasItems ? (
+        // Home: dropzone hero with the dashboard living directly beneath it.
         <main class="flex-1">
           <DropZone />
+          <StatsView />
         </main>
       ) : (
         <>

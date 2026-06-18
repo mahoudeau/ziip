@@ -1,5 +1,6 @@
 import { CODECS } from '../codecs/registry';
 import { cropImageData } from '../lib/crop';
+import { resizeImageData } from '../lib/resize';
 import { getCompressPool } from '../workers/pool';
 import { images, selectedImageId, updateImage } from './images';
 import { recordCompression } from './stats';
@@ -47,7 +48,11 @@ async function runEncodeImage(id: string): Promise<void> {
   updateImage(id, { status: 'encoding' });
 
   try {
-    const data = img.crop ? cropImageData(img.originalImageData, img.crop) : img.originalImageData;
+    let data = img.crop ? cropImageData(img.originalImageData, img.crop) : img.originalImageData;
+    if (img.resize && (img.resize.width !== data.width || img.resize.height !== data.height)) {
+      data = await resizeImageData(data, img.resize.width, img.resize.height);
+      if (generationByImage.get(id) !== gen) return;
+    }
     const priority = id === selectedImageId.peek() ? 'high' : 'normal';
     const { buffer, msElapsed } = await getCompressPool().enqueue(codecId, opts, data, priority);
     if (generationByImage.get(id) !== gen) return;

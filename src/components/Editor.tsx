@@ -5,6 +5,7 @@ import {
   selectImage,
   selectedImageId,
   setCrop,
+  setResize,
   setImageCodecAndOptions,
 } from '../state/images';
 import { applyToAll } from '../state/settings';
@@ -27,7 +28,7 @@ import type { CropRect } from '../lib/crop';
 import { ASPECT_RATIOS, clampRect, cropImageData, normalizeRect } from '../lib/crop';
 import { formatBytes, formatDeltaPct } from '../lib/format';
 import { triggerBlobDownload } from '../lib/download';
-import { getRenderablePreviewUrl } from '../lib/preview';
+import { getRenderablePreviewUrl, useRenderableSourceUrl } from '../lib/preview';
 import { scheduleEncodeImage } from '../state/encode';
 import { Spinner } from './ui/Spinner';
 
@@ -91,8 +92,7 @@ export function Editor() {
     return ASPECT_RATIOS.find((a) => a.id === aspectId)?.ratio ?? null;
   }, [aspectId, customW, customH]);
 
-  const [originalUrl] = useState(() => URL.createObjectURL(originalBlob));
-  useEffect(() => () => URL.revokeObjectURL(originalUrl), [originalUrl]);
+  const sourceUrl = useRenderableSourceUrl(originalBlob, filename, originalImageData);
 
   const effectiveImageData = useMemo(() => {
     return crop ? cropImageData(originalImageData, crop) : originalImageData;
@@ -294,13 +294,13 @@ export function Editor() {
     <div class="px-6 lg:px-8 pt-2 pb-6">
       <header class="flex items-center justify-between mb-6 max-w-7xl mx-auto">
         <button
-          class="flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+          class="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-ink transition-colors"
           onClick={backToQueue}
         >
           ← Back to queue
         </button>
         <button
-          class="px-3 py-2 text-sm text-zinc-500 hover:text-red-400 transition-colors"
+          class="px-3 py-2 text-sm text-faint hover:text-red-600 transition-colors"
           onClick={removeAndBack}
         >
           Remove from queue
@@ -309,9 +309,9 @@ export function Editor() {
 
       <div class="grid lg:grid-cols-[1fr_400px] gap-6 max-w-7xl mx-auto items-start">
         <div class="h-[70vh] min-h-[400px] relative">
-          {cropMode ? (
+          {cropMode && sourceUrl ? (
             <CropTool
-              imageUrl={originalUrl}
+              imageUrl={sourceUrl}
               sourceWidth={originalImageData.width}
               sourceHeight={originalImageData.height}
               rect={liveCropRect}
@@ -319,23 +319,30 @@ export function Editor() {
               onRectChange={setLiveCropRect}
               onViewerReady={(api) => { viewerApiRef.current = api; }}
             />
-          ) : (
+          ) : !cropMode && (croppedOriginalUrl ?? sourceUrl) ? (
             <CompareSlider
-              originalUrl={croppedOriginalUrl ?? originalUrl}
+              originalUrl={(croppedOriginalUrl ?? sourceUrl) as string}
               encodedUrl={encodedUrl}
               encoding={isEncoding}
               onViewerReady={(api) => { viewerApiRef.current = api; }}
             />
+          ) : (
+            <div class="absolute inset-0 grid place-items-center text-faint">
+              <Spinner size={28} />
+            </div>
           )}
         </div>
 
-        <aside class="bg-zinc-900 rounded-xl p-6 space-y-6 self-start">
+        <aside class="bg-surface rounded-xl p-6 space-y-6 self-start">
           <div>
             <p class="text-sm font-medium truncate" title={filename}>{filename}</p>
-            <p class="text-xs text-zinc-500 mt-1">
+            <p class="text-xs text-faint mt-1">
               {effectiveImageData.width}×{effectiveImageData.height}
               {crop && (
-                <span class="text-amber-400"> · cropped from {originalImageData.width}×{originalImageData.height}</span>
+                <span class="text-amber-600"> · cropped from {originalImageData.width}×{originalImageData.height}</span>
+              )}
+              {item.resize && (
+                <span class="text-amber-600"> · resized to {item.resize.width}×{item.resize.height}</span>
               )}
               {' · '}{formatBytes(originalBytes)}
             </p>
@@ -357,13 +364,24 @@ export function Editor() {
               onClear={clearAppliedCrop}
             />
           ) : (
-            <button
-              class="w-full px-4 py-2 text-sm rounded-lg font-medium bg-zinc-800 text-zinc-100 hover:bg-zinc-700 transition-colors"
-              onClick={enterCropMode}
-            >
-              {crop ? 'Edit crop' : 'Crop'}
-              <span class="text-xs text-zinc-500 ml-2">C</span>
-            </button>
+            <>
+              <button
+                class="w-full px-4 py-2 text-sm rounded-lg font-medium bg-elevated text-ink hover:bg-border transition-colors"
+                onClick={enterCropMode}
+              >
+                {crop ? 'Edit crop' : 'Crop'}
+                <span class="text-xs text-faint ml-2">C</span>
+              </button>
+              <ResizeControls
+                baseWidth={effectiveImageData.width}
+                baseHeight={effectiveImageData.height}
+                resize={item.resize}
+                onChange={(r) => {
+                  setResize(id, r);
+                  scheduleEncodeImage(id);
+                }}
+              />
+            </>
           )}
 
           <CodecPicker
@@ -404,29 +422,29 @@ export function Editor() {
                   type="button"
                   onClick={resetPendingOptions}
                   disabled={isAtDefaults}
-                  class="px-3 py-1.5 text-sm rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-sm rounded text-muted hover:text-ink hover:bg-elevated disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   title="Reset this format's options to defaults"
                 >
                   Reset
                 </button>
               </div>
-              <div class="space-y-2 pt-1 border-t border-zinc-800">
+              <div class="space-y-2 pt-1 border-t border-border">
                 <button
                   type="button"
                   onClick={() => applyToAll(pendingCodec, pendingOptions)}
-                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                  class="w-full text-xs text-muted hover:text-ink py-1.5 px-2 rounded border border-border hover:border-border transition-colors"
                 >
                   Apply these settings to all images
                 </button>
                 <button
                   type="button"
                   onClick={() => setSavePresetOpen(true)}
-                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                  class="w-full text-xs text-muted hover:text-ink py-1.5 px-2 rounded border border-border hover:border-border transition-colors"
                 >
                   Save current settings as preset…
                 </button>
                 {presetId && isApplied && (
-                  <p class="text-xs text-amber-300/80 text-center">
+                  <p class="text-xs text-amber-600/80 text-center">
                     Settings come from a preset · changes will detach
                   </p>
                 )}
@@ -442,7 +460,7 @@ export function Editor() {
             />
           )}
 
-          <dl class="text-sm space-y-1.5 pt-2 border-t border-zinc-800">
+          <dl class="text-sm space-y-1.5 pt-2 border-t border-border">
             <Row label="Original" value={formatBytes(originalBytes)} />
             <Row
               label="Encoded"
@@ -464,7 +482,7 @@ export function Editor() {
           <button
             disabled={!encoded || isEncoding}
             onClick={downloadEncoded}
-            class="w-full px-4 py-3 bg-zinc-100 text-zinc-900 rounded-lg font-medium hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="w-full px-4 py-3 bg-brand text-white rounded-lg font-medium hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Download {meta.name}
           </button>
@@ -506,14 +524,14 @@ function CropControls({
   const valid = rect && rect.width >= 1 && rect.height >= 1;
   return (
     <div class="space-y-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-      <div class="text-xs font-medium text-amber-300 uppercase tracking-wide">Crop mode</div>
+      <div class="text-xs font-medium text-amber-600 uppercase tracking-wide">Crop mode</div>
 
       <div>
-        <label class="block text-xs text-zinc-400 mb-1">Aspect ratio</label>
+        <label class="block text-xs text-muted mb-1">Aspect ratio</label>
         <select
           value={aspectId}
           onChange={(e) => onAspectChange((e.currentTarget as HTMLSelectElement).value)}
-          class="w-full bg-zinc-800 text-zinc-100 text-sm rounded px-2 py-1.5 border border-zinc-700"
+          class="w-full bg-elevated text-ink text-sm rounded px-2 py-1.5 border border-border"
         >
           {ASPECT_RATIOS.map((a) => (
             <option key={a.id} value={a.id}>{a.label}</option>
@@ -523,7 +541,7 @@ function CropControls({
         {aspectId === 'custom' && (
           <div class="flex items-center gap-2 mt-2">
             <NudgeInput value={customW} onChange={(v) => onCustomChange(v, customH)} min={1} max={9999} />
-            <span class="text-zinc-500">:</span>
+            <span class="text-faint">:</span>
             <NudgeInput value={customH} onChange={(v) => onCustomChange(customW, v)} min={1} max={9999} />
           </div>
         )}
@@ -537,12 +555,12 @@ function CropControls({
       </div>
 
       {!valid && (
-        <p class="text-xs text-zinc-500">Click and drag on the image, or type values above.</p>
+        <p class="text-xs text-faint">Click and drag on the image, or type values above.</p>
       )}
 
       <div class="grid grid-cols-2 gap-2 pt-1">
         <button
-          class="px-3 py-2 text-sm rounded bg-zinc-800 text-zinc-200 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          class="px-3 py-2 text-sm rounded bg-elevated text-ink hover:bg-border disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           onClick={onReset}
           disabled={!rect}
           title="R"
@@ -550,7 +568,7 @@ function CropControls({
           Reset
         </button>
         <button
-          class="px-3 py-2 text-sm rounded bg-zinc-800 text-zinc-200 hover:bg-zinc-700 transition-colors"
+          class="px-3 py-2 text-sm rounded bg-elevated text-ink hover:bg-border transition-colors"
           onClick={onCancel}
           title="Esc"
         >
@@ -558,14 +576,14 @@ function CropControls({
         </button>
         {hasAppliedCrop && (
           <button
-            class="px-3 py-2 text-sm rounded text-red-400 hover:bg-red-500/10 transition-colors col-span-2"
+            class="px-3 py-2 text-sm rounded text-red-600 hover:bg-red-500/10 transition-colors col-span-2"
             onClick={onClear}
           >
             Clear applied crop
           </button>
         )}
         <button
-          class="col-span-2 px-3 py-2 text-sm rounded bg-zinc-100 text-zinc-900 font-medium hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          class="col-span-2 px-3 py-2 text-sm rounded bg-brand text-white font-medium hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           onClick={onApply}
           disabled={!valid}
           title="Enter"
@@ -574,8 +592,92 @@ function CropControls({
         </button>
       </div>
 
-      <p class="text-xs text-zinc-500 pt-1 leading-relaxed">
+      <p class="text-xs text-faint pt-1 leading-relaxed">
         Shift = preserve ratio · Alt = from center · Arrows nudge (Shift = 10 px) · Wheel = zoom · Space + drag = pan · 0 = fit · 1 = 100%
+      </p>
+    </div>
+  );
+}
+
+const RESIZE_MULTIPLIERS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3] as const;
+
+function ResizeControls({
+  baseWidth,
+  baseHeight,
+  resize,
+  onChange,
+}: {
+  baseWidth: number;
+  baseHeight: number;
+  resize: { width: number; height: number } | undefined;
+  onChange: (r: { width: number; height: number } | undefined) => void;
+}) {
+  const aspect = baseWidth / baseHeight;
+  const curW = resize?.width ?? baseWidth;
+  const curH = resize?.height ?? baseHeight;
+  const isOriginal = !resize || (resize.width === baseWidth && resize.height === baseHeight);
+
+  function emit(width: number, height: number) {
+    if (width === baseWidth && height === baseHeight) onChange(undefined);
+    else onChange({ width, height });
+  }
+  function setMultiplier(m: number) {
+    emit(Math.max(1, Math.round(baseWidth * m)), Math.max(1, Math.round(baseHeight * m)));
+  }
+  function setWidth(w: number) {
+    const width = Math.max(1, Math.round(w));
+    emit(width, Math.max(1, Math.round(width / aspect)));
+  }
+  function setHeight(h: number) {
+    const height = Math.max(1, Math.round(h));
+    emit(Math.max(1, Math.round(height * aspect)), height);
+  }
+
+  // Highlight the multiplier matching the current target, if any.
+  const activeM = RESIZE_MULTIPLIERS.find(
+    (m) => Math.max(1, Math.round(baseWidth * m)) === curW && Math.max(1, Math.round(baseHeight * m)) === curH,
+  );
+
+  return (
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="text-sm font-medium">Resize</label>
+        {!isOriginal && (
+          <button
+            type="button"
+            class="text-xs text-faint hover:text-ink transition-colors"
+            onClick={() => onChange(undefined)}
+          >
+            Original
+          </button>
+        )}
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        {RESIZE_MULTIPLIERS.map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMultiplier(m)}
+            class={`px-2 py-1 text-xs rounded tabular-nums transition-colors ${
+              activeM === m ? 'bg-brand text-white' : 'bg-elevated text-muted hover:bg-border'
+            }`}
+          >
+            ×{m}
+          </button>
+        ))}
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="flex items-center gap-1.5">
+          <span class="text-xs text-faint w-3">W</span>
+          <NudgeInput value={curW} onChange={setWidth} min={1} max={20000} />
+        </label>
+        <label class="flex items-center gap-1.5">
+          <span class="text-xs text-faint w-3">H</span>
+          <NudgeInput value={curH} onChange={setHeight} min={1} max={20000} />
+        </label>
+      </div>
+      <p class="text-xs text-faint">
+        {curW}×{curH}px{!isOriginal && ` · from ${baseWidth}×${baseHeight}`} · aspect locked
       </p>
     </div>
   );
@@ -594,7 +696,7 @@ function FieldInput({
 }) {
   return (
     <label class={`flex items-center gap-1.5 ${disabled ? 'opacity-50' : ''}`}>
-      <span class="text-xs text-zinc-500 w-3">{label}</span>
+      <span class="text-xs text-faint w-3">{label}</span>
       <NudgeInput value={value} onChange={onChange} disabled={disabled} />
     </label>
   );
@@ -635,7 +737,7 @@ function NudgeInput({
         if (!Number.isNaN(v)) onChange(v);
       }}
       onKeyDown={handleKeyDown}
-      class="flex-1 min-w-0 bg-zinc-800 text-zinc-100 text-sm tabular-nums rounded px-2 py-1 border border-zinc-700 disabled:opacity-50"
+      class="flex-1 min-w-0 bg-elevated text-ink text-sm tabular-nums rounded px-2 py-1 border border-border disabled:opacity-50"
     />
   );
 }
@@ -653,7 +755,7 @@ function Row({
 }) {
   return (
     <div class="flex justify-between">
-      <dt class="text-zinc-400">{label}</dt>
+      <dt class="text-muted">{label}</dt>
       <dd class={`tabular-nums flex items-center gap-1.5 ${stale ? 'opacity-40' : ''}`}>
         {pending && <Spinner size={12} />}
         <span>{pending ? 'encoding…' : value}</span>

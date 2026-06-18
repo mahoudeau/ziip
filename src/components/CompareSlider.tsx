@@ -145,7 +145,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
   return (
     <div
       ref={containerRef}
-      class="relative w-full h-full bg-zinc-900 rounded-xl overflow-hidden select-none touch-none flex items-center justify-center"
+      class="relative w-full h-full bg-surface rounded-xl overflow-hidden select-none touch-none flex items-center justify-center"
       style={`cursor: ${containerCursor}`}
       onPointerDown={onContainerDown}
       onPointerMove={onContainerMove}
@@ -208,25 +208,25 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
 
       {/* Visual divider line + handle (purely cosmetic) */}
       <div
-        class="absolute top-0 bottom-0 w-px bg-zinc-100 pointer-events-none"
+        class="absolute top-0 bottom-0 w-px bg-brand pointer-events-none"
         style={`left: ${pos * 100}%`}
       />
       <div
-        class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-zinc-100 shadow-lg pointer-events-none flex items-center justify-center"
+        class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-brand shadow-lg pointer-events-none flex items-center justify-center"
         style={`left: ${pos * 100}%`}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" class="text-zinc-900">
+        <svg width="14" height="14" viewBox="0 0 14 14" class="text-white">
           <path d="M2 7 L5 4 M2 7 L5 10 M12 7 L9 4 M12 7 L9 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" />
         </svg>
       </div>
 
-      <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-zinc-100 rounded pointer-events-none">Original</div>
+      <div class="absolute top-3 left-3 px-2 py-0.5 text-xs bg-black/60 text-white rounded pointer-events-none">Original</div>
 
       {/* Encoding pill — vertically centered, horizontally between the
           divider and the right edge of the image. */}
       {encoding && fitDims.w > 0 && (
         <div
-          class="absolute flex items-center gap-2 px-3 py-1.5 bg-black/75 text-zinc-100 text-xs rounded-full pointer-events-none backdrop-blur-sm shadow-lg whitespace-nowrap"
+          class="absolute flex items-center gap-2 px-3 py-1.5 bg-black/75 text-white text-xs rounded-full pointer-events-none backdrop-blur-sm shadow-lg whitespace-nowrap"
           style={`left: ${pillLeft}px; top: 50%; transform: translate(-50%, -50%);`}
         >
           <Spinner size={12} />
@@ -242,14 +242,14 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
         class="absolute top-3 right-3 flex items-center gap-1 text-xs"
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div class="px-2 py-1 bg-black/60 text-zinc-100 rounded tabular-nums pointer-events-none">
+        <div class="px-2 py-1 bg-black/60 text-white rounded tabular-nums pointer-events-none">
           {zoomPct != null ? `${zoomPct}%` : '—'} · Encoded
         </div>
         <button
           onClick={viewer.fit}
           disabled={isReset}
           title="Fit to screen (0)"
-          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Fit
         </button>
@@ -257,7 +257,7 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
           onClick={() => naturalDims && viewer.zoom100(naturalDims.w, naturalDims.h)}
           disabled={!naturalDims || (zoomPct != null && Math.abs(zoomPct - 100) < 1)}
           title="Zoom 1:1 (1)"
-          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-zinc-100 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          class="px-2 py-1 bg-black/60 hover:bg-black/80 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           100%
         </button>

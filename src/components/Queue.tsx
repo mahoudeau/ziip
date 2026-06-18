@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { decodeImageFile } from '../lib/decode';
-import { addImage, images } from '../state/images';
-import { scheduleEncodeImage } from '../state/encode';
+import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
+import { addImage, applyResizeMultiplierToAll, clearImages, images } from '../state/images';
+import { scheduleEncodeAll, scheduleEncodeImage } from '../state/encode';
 import { applyToAll, codec, options } from '../state/settings';
 import {
   pendingByCodec,
@@ -27,6 +27,7 @@ export function Queue() {
   // straight away what's being applied to incoming images.
   const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
   const [savePresetOpen, setSavePresetOpen] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   // Picker selection. Options come from the shared draft signal so they
   // persist across page reloads and stay in sync between Queue + Editor.
@@ -57,7 +58,7 @@ export function Queue() {
     // instead of one-by-one waiting for each previous decode to complete.
     await Promise.all(
       Array.from(files).map(async (file) => {
-        if (!file.type.startsWith('image/')) {
+        if (!isLikelyImageFile(file)) {
           firstError ??= `Skipped "${file.name}" — not an image.`;
           return;
         }
@@ -96,7 +97,7 @@ export function Queue() {
 
   return (
     <div
-      class={`min-h-full ${isDragging ? 'ring-2 ring-zinc-300 ring-inset' : ''}`}
+      class={`min-h-full ${isDragging ? 'ring-2 ring-brand ring-inset' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -110,22 +111,50 @@ export function Queue() {
             <h2 class="text-lg font-semibold">
               {items.length} image{items.length === 1 ? '' : 's'}
             </h2>
-            <button
-              class="px-3 py-1.5 text-sm bg-zinc-800 text-zinc-100 rounded hover:bg-zinc-700 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              + Add images
-            </button>
+            <div class="flex items-center gap-2">
+              {confirmingClear ? (
+                <>
+                  <button
+                    class="px-3 py-1.5 text-sm rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
+                    onClick={() => {
+                      clearImages();
+                      setConfirmingClear(false);
+                    }}
+                  >
+                    Confirm clear
+                  </button>
+                  <button
+                    class="px-3 py-1.5 text-sm text-faint hover:text-ink transition-colors"
+                    onClick={() => setConfirmingClear(false)}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  class="px-3 py-1.5 text-sm text-muted hover:text-red-600 transition-colors"
+                  onClick={() => setConfirmingClear(true)}
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                class="px-3 py-1.5 text-sm bg-elevated text-ink rounded hover:bg-border transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                + Add images
+              </button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif,.svg"
               multiple
               class="hidden"
               onChange={onChange}
             />
           </div>
-          {error && <p class="mb-4 text-sm text-red-400">{error}</p>}
+          {error && <p class="mb-4 text-sm text-red-600">{error}</p>}
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {items.map((item) => (
               <QueueItem key={item.id} item={item} />
@@ -133,11 +162,33 @@ export function Queue() {
           </div>
         </div>
 
-        <aside class="bg-zinc-900 rounded-xl p-6 space-y-6 self-start lg:sticky lg:top-6">
+        <aside class="bg-surface rounded-xl p-6 space-y-6 self-start lg:sticky lg:top-6">
           <div>
-            <p class="text-xs uppercase tracking-wide text-zinc-500 font-medium">Settings</p>
-            <p class="text-xs text-zinc-400 mt-1">Apply to every image in the queue.</p>
+            <p class="text-xs uppercase tracking-wide text-faint font-medium">Settings</p>
+            <p class="text-xs text-muted mt-1">Apply to every image in the queue.</p>
           </div>
+
+          <div class="space-y-2">
+            <p class="text-sm font-medium">Resize all</p>
+            <div class="flex flex-wrap gap-1.5">
+              {[0.25, 0.5, 0.75, 1, 1.5, 2, 3].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    applyResizeMultiplierToAll(m);
+                    scheduleEncodeAll();
+                  }}
+                  class="px-2 py-1 text-xs rounded tabular-nums bg-elevated text-muted hover:bg-border transition-colors"
+                  title={m === 1 ? 'Reset to original size' : `Scale every image ×${m}`}
+                >
+                  {m === 1 ? 'Original' : `×${m}`}
+                </button>
+              ))}
+            </div>
+            <p class="text-xs text-faint">Scales each image by the multiplier · aspect locked</p>
+          </div>
+
           <CodecPicker
             value={pendingCodec}
             showingPresets={showingPresets}
@@ -178,17 +229,17 @@ export function Queue() {
                   type="button"
                   onClick={resetPendingOptions}
                   disabled={isAtDefaults}
-                  class="px-3 py-1.5 text-sm rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-3 py-1.5 text-sm rounded text-muted hover:text-ink hover:bg-elevated disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   title="Reset this format's options to defaults"
                 >
                   Reset
                 </button>
               </div>
-              <div class="pt-1 border-t border-zinc-800">
+              <div class="pt-1 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setSavePresetOpen(true)}
-                  class="w-full text-xs text-zinc-400 hover:text-zinc-100 py-1.5 px-2 rounded border border-zinc-800 hover:border-zinc-700 transition-colors"
+                  class="w-full text-xs text-muted hover:text-ink py-1.5 px-2 rounded border border-border hover:border-border transition-colors"
                 >
                   Save current settings as preset…
                 </button>

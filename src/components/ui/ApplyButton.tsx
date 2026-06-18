@@ -24,8 +24,8 @@ export function ApplyButton({
       disabled={disabled}
       class={`flex-1 px-3 py-1.5 text-sm rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
         isApplied
-          ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-          : 'bg-zinc-100 text-zinc-900 hover:bg-white'
+          ? 'bg-elevated text-muted hover:bg-border hover:text-ink'
+          : 'bg-brand text-white hover:bg-brand-strong'
       }`}
       title={isApplied ? 'Re-encode with these settings' : undefined}
     >

@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
       '@jsquash/jxl',
       '@jsquash/oxipng',
       '@jsquash/png',
+      // heic-to embeds libheif (wasm) and spins up its own blob-URL worker.
+      // Leaving it un-prebundled keeps import.meta.url pointing at the real
+      // package path so those internals resolve correctly in dev.
+      'heic-to',
     ],
   },
   // The compress worker uses dynamic imports to lazy-load codec modules

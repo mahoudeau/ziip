@@ -30,8 +30,8 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
 
   if (list.length === 0) {
     return (
-      <div class="text-sm text-zinc-400 bg-zinc-950 rounded-lg p-4 border border-dashed border-zinc-800 text-center">
-        <p class="font-medium text-zinc-300 mb-1">No presets yet</p>
+      <div class="text-sm text-muted bg-bg rounded-lg p-4 border border-dashed border-border text-center">
+        <p class="font-medium text-muted mb-1">No presets yet</p>
         <p class="text-xs">
           Tweak settings in any of the format tabs, then click <span class="font-medium">Save current settings as preset</span> at the bottom of the panel.
         </p>
@@ -58,8 +58,8 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
         const renaming = renamingId === preset.id;
         const confirming = confirmDeleteId === preset.id;
         return (
-          <div key={preset.id} class="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
-            <div class={`flex items-center gap-2 px-3 py-2 ${renaming ? '' : 'hover:bg-zinc-800/50 transition-colors'}`}>
+          <div key={preset.id} class="bg-bg border border-border rounded-lg overflow-hidden">
+            <div class={`flex items-center gap-2 px-3 py-2 ${renaming ? '' : 'hover:bg-elevated/50 transition-colors'}`}>
               {renaming ? (
                 <input
                   type="text"
@@ -69,7 +69,7 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                     if (e.key === 'Enter') commitRename(preset.id);
                     if (e.key === 'Escape') setRenamingId(null);
                   }}
-                  class="flex-1 min-w-0 bg-zinc-800 text-zinc-100 text-sm font-medium rounded px-2 py-1 border border-zinc-700"
+                  class="flex-1 min-w-0 bg-elevated text-ink text-sm font-medium rounded px-2 py-1 border border-border"
                   autofocus
                 />
               ) : (
@@ -79,21 +79,21 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                   class="flex-1 min-w-0 text-left text-sm font-medium truncate flex items-center gap-1.5"
                 >
                   {preset.isDefault && (
-                    <span class="text-amber-300 flex-shrink-0" title="Default for new images" aria-label="Default">
+                    <span class="text-amber-600 flex-shrink-0" title="Default for new images" aria-label="Default">
                       ★
                     </span>
                   )}
                   <span class="truncate">{preset.name}</span>
                 </button>
               )}
-              <span class="text-[10px] font-medium uppercase tracking-wide rounded px-1.5 py-0.5 bg-zinc-800 text-zinc-300 flex-shrink-0">
+              <span class="text-[10px] font-medium uppercase tracking-wide rounded px-1.5 py-0.5 bg-elevated text-muted flex-shrink-0">
                 {meta.outputExt}
               </span>
               {!renaming && (
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : preset.id)}
-                  class="text-zinc-500 hover:text-zinc-200 text-xs flex-shrink-0 px-1"
+                  class="text-faint hover:text-ink text-xs flex-shrink-0 px-1"
                   aria-label={expanded ? 'Collapse' : 'Expand'}
                 >
                   {expanded ? '▾' : '▸'}
@@ -101,7 +101,7 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
               )}
             </div>
             {expanded && (
-              <div class="px-3 pb-3 pt-1 space-y-3 border-t border-zinc-800">
+              <div class="px-3 pb-3 pt-1 space-y-3 border-t border-border">
                 <dl class="text-xs space-y-1 tabular-nums">
                   <Row label="Format" value={`${meta.name} (.${meta.outputExt})`} />
                   {meta.options.map((opt) => {
@@ -125,14 +125,14 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                   )}
                 </dl>
 
-                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-200 transition-colors">
+                <label class="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-ink transition-colors">
                   <input
                     type="checkbox"
                     checked={!!preset.isDefault}
                     onChange={(e) =>
                       setDefaultPreset((e.currentTarget as HTMLInputElement).checked ? preset.id : null)
                     }
-                    class="accent-amber-300"
+                    class="accent-amber-500"
                   />
                   Default for newly added images
                 </label>
@@ -144,14 +144,14 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                         type="button"
                         onClick={() => commitRename(preset.id)}
                         disabled={!draftName.trim()}
-                        class="flex-1 px-3 py-1.5 text-sm rounded bg-zinc-100 text-zinc-900 font-medium hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        class="flex-1 px-3 py-1.5 text-sm rounded bg-brand text-white font-medium hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Save
                       </button>
                       <button
                         type="button"
                         onClick={() => setRenamingId(null)}
-                        class="px-3 py-1.5 text-sm rounded text-zinc-500 hover:text-zinc-200 transition-colors"
+                        class="px-3 py-1.5 text-sm rounded text-faint hover:text-ink transition-colors"
                       >
                         Cancel
                       </button>
@@ -165,14 +165,14 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
                           setConfirmDeleteId(null);
                           if (expandedId === preset.id) setExpandedId(null);
                         }}
-                        class="flex-1 px-3 py-1.5 text-sm rounded bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
+                        class="flex-1 px-3 py-1.5 text-sm rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
                       >
                         Confirm delete
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(null)}
-                        class="px-3 py-1.5 text-sm rounded text-zinc-500 hover:text-zinc-200 transition-colors"
+                        class="px-3 py-1.5 text-sm rounded text-faint hover:text-ink transition-colors"
                       >
                         Cancel
                       </button>
@@ -203,8 +203,8 @@ export function PresetsPanel({ onApply, applyLabel, activePresetId, appliedPrese
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div class="flex justify-between gap-2">
-      <dt class="text-zinc-500">{label}</dt>
-      <dd class="text-zinc-300 truncate">{value}</dd>
+      <dt class="text-faint">{label}</dt>
+      <dd class="text-muted truncate">{value}</dd>
     </div>
   );
 }
@@ -235,7 +235,7 @@ function KebabMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () 
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="More actions"
-        class="px-2 py-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded transition-colors"
+        class="px-2 py-1.5 text-muted hover:text-ink hover:bg-elevated rounded transition-colors"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <circle cx="8" cy="3" r="1.5" />
@@ -245,7 +245,7 @@ function KebabMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () 
       </button>
       {open && (
         <div
-          class="absolute right-0 bottom-full mb-1 z-10 min-w-[140px] bg-zinc-800 border border-zinc-700 rounded shadow-lg overflow-hidden"
+          class="absolute right-0 bottom-full mb-1 z-10 min-w-[140px] bg-elevated border border-border rounded shadow-lg overflow-hidden"
         >
           <button
             type="button"
@@ -253,7 +253,7 @@ function KebabMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () 
               setOpen(false);
               onRename();
             }}
-            class="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+            class="w-full text-left px-3 py-2 text-sm text-ink hover:bg-border transition-colors"
           >
             Rename
           </button>
@@ -263,7 +263,7 @@ function KebabMenu({ onRename, onDelete }: { onRename: () => void; onDelete: () 
               setOpen(false);
               onDelete();
             }}
-            class="w-full text-left px-3 py-2 text-sm text-red-300 hover:bg-red-500/20 transition-colors"
+            class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-500/20 transition-colors"
           >
             Delete
           </button>

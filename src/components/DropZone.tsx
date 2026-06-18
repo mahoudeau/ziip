@@ -1,5 +1,6 @@
 import { useRef, useState } from 'preact/hooks';
-import { decodeImageFile } from '../lib/decode';
+import { decodeImageFile, isLikelyImageFile } from '../lib/decode';
+import { LogoMark } from './ui/Logo';
 import { addImage } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
 import { codec, options } from '../state/settings';
@@ -15,7 +16,7 @@ export function DropZone() {
     let firstError: string | null = null;
     await Promise.all(
       Array.from(files).map(async (file) => {
-        if (!file.type.startsWith('image/')) {
+        if (!isLikelyImageFile(file)) {
           firstError ??= `"${file.name}" is not an image (${file.type || 'unknown type'}).`;
           return;
         }
@@ -54,7 +55,7 @@ export function DropZone() {
 
   return (
     <div
-      class="flex-1 flex flex-col items-center justify-center p-8 min-h-[80vh]"
+      class="flex flex-col items-center justify-center px-8 pt-8 pb-12"
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -63,16 +64,21 @@ export function DropZone() {
       onDrop={onDrop}
     >
       <div
-        class={`border-2 border-dashed rounded-2xl p-16 text-center transition-colors ${
-          isDragging ? 'border-zinc-300 bg-zinc-900/40' : 'border-zinc-700 hover:border-zinc-500'
+        class={`w-full max-w-2xl border-2 border-dashed rounded-3xl p-16 text-center transition-colors ${
+          isDragging
+            ? 'border-brand bg-brand/5'
+            : 'border-border bg-surface/60 hover:border-brand/50'
         }`}
       >
-        <h1 class="text-6xl font-bold tracking-tight mb-3">Ziip</h1>
-        <p class="text-zinc-400 mb-8 max-w-sm mx-auto">
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <LogoMark class="w-14 h-14 text-brand" />
+          <h1 class="text-6xl font-display font-semibold tracking-tight">Ziip</h1>
+        </div>
+        <p class="text-muted mb-8 max-w-sm mx-auto">
           Drop images to compress them. Files never leave your device.
         </p>
         <button
-          class="px-6 py-3 bg-zinc-100 text-zinc-900 rounded-lg font-medium hover:bg-white transition-colors"
+          class="px-6 py-3 bg-brand text-white rounded-lg font-medium hover:bg-brand-strong transition-colors"
           onClick={() => fileInputRef.current?.click()}
         >
           Choose files
@@ -80,13 +86,13 @@ export function DropZone() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif,.svg"
           multiple
           class="hidden"
           onChange={onChange}
         />
       </div>
-      {error && <p class="mt-6 text-sm text-red-400 max-w-md text-center">{error}</p>}
+      {error && <p class="mt-6 text-sm text-red-600 max-w-md text-center">{error}</p>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { App } from './app';
+import '@fontsource-variable/fredoka';
 import './styles/globals.css';
 
 const root = document.getElementById('app');

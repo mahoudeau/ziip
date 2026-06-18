@@ -43,7 +43,7 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
     <Modal title="Save preset" onClose={onClose}>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs text-zinc-400 mb-1">Name</label>
+          <label class="block text-xs text-muted mb-1">Name</label>
           <input
             ref={inputRef}
             type="text"
@@ -54,15 +54,15 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
             }}
             onKeyDown={onKeyDown}
             placeholder="Web JPEG q80"
-            class="w-full bg-zinc-800 text-zinc-100 text-sm rounded px-3 py-2 border border-zinc-700"
+            class="w-full bg-elevated text-ink text-sm rounded px-3 py-2 border border-border"
             autofocus
           />
         </div>
 
-        <div class="text-xs text-zinc-400 bg-zinc-950 rounded p-3 border border-zinc-800">
-          <div class="font-medium text-zinc-300 mb-1">Saving:</div>
+        <div class="text-xs text-muted bg-bg rounded p-3 border border-border">
+          <div class="font-medium text-muted mb-1">Saving:</div>
           <div>
-            <span class="text-zinc-500">Format:</span> {meta.name} (.{meta.outputExt})
+            <span class="text-faint">Format:</span> {meta.name} (.{meta.outputExt})
           </div>
           {meta.options.map((opt) => {
             const val = options[opt.key];
@@ -75,14 +75,14 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
                 : String(val);
             return (
               <div key={opt.key}>
-                <span class="text-zinc-500">{opt.label}:</span> {display}
+                <span class="text-faint">{opt.label}:</span> {display}
               </div>
             );
           })}
         </div>
 
         {confirmingOverwrite && (
-          <p class="text-sm text-amber-300">
+          <p class="text-sm text-amber-600">
             A preset with this name already exists. Click Save again to overwrite.
           </p>
         )}
@@ -91,7 +91,7 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            class="px-4 py-2 text-sm rounded bg-zinc-800 text-zinc-200 hover:bg-zinc-700 transition-colors"
+            class="px-4 py-2 text-sm rounded bg-elevated text-ink hover:bg-border transition-colors"
           >
             Cancel
           </button>
@@ -99,7 +99,7 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
             type="button"
             onClick={trySave}
             disabled={!name.trim()}
-            class="px-4 py-2 text-sm rounded bg-zinc-100 text-zinc-900 font-medium hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="px-4 py-2 text-sm rounded bg-brand text-white font-medium hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {confirmingOverwrite ? 'Overwrite' : 'Save'}
           </button>
