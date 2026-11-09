@@ -32,6 +32,49 @@ export async function imageDataToPngBlobUrl(imageData: ImageData): Promise<strin
   return URL.createObjectURL(pngBlob);
 }
 
+interface SharedPng {
+  promise: Promise<string>;
+  refs: number;
+  releaseTimer: number | null;
+}
+
+const pngByImage = new WeakMap<ImageData, SharedPng>();
+/** Leaving the Editor unmounts one view just before mounting the next, so hold
+ * a released PNG briefly instead of paying for a full re-encode. */
+const PNG_RELEASE_DELAY_MS = 5000;
+/** Renders as a broken image, which beats a spinner that never ends. */
+const UNRENDERABLE_URL = 'data:,';
+
+function acquirePng(imageData: ImageData): SharedPng {
+  let entry = pngByImage.get(imageData);
+  if (!entry) {
+    const created: SharedPng = {
+      promise: imageDataToPngBlobUrl(imageData),
+      refs: 0,
+      releaseTimer: null,
+    };
+    // A failure shouldn't stick: the next mount gets to try again.
+    created.promise.catch(() => pngByImage.delete(imageData));
+    pngByImage.set(imageData, created);
+    entry = created;
+  }
+  if (entry.releaseTimer !== null) {
+    window.clearTimeout(entry.releaseTimer);
+    entry.releaseTimer = null;
+  }
+  entry.refs++;
+  return entry;
+}
+
+function releasePng(imageData: ImageData, entry: SharedPng): void {
+  entry.refs--;
+  if (entry.refs > 0) return;
+  entry.releaseTimer = window.setTimeout(() => {
+    if (pngByImage.get(imageData) === entry) pngByImage.delete(imageData);
+    entry.promise.then(URL.revokeObjectURL, () => undefined);
+  }, PNG_RELEASE_DELAY_MS);
+}
+
 /**
  * Object URL for showing the *original* image. Natively-renderable sources use
  * a direct blob URL; for HEIC/HEIF we fall back to the decoded pixels. Returns
@@ -46,22 +89,27 @@ export function useRenderableSourceUrl(
   useEffect(() => {
     let cancelled = false;
     let created: string | null = null;
+    let release: (() => void) | null = null;
     if (canPreviewFromSourceBlob(blob.type, filename)) {
       created = URL.createObjectURL(blob);
       setUrl(created);
     } else {
-      imageDataToPngBlobUrl(imageData).then((u) => {
-        if (cancelled) {
-          URL.revokeObjectURL(u);
-          return;
-        }
-        created = u;
-        setUrl(u);
-      });
+      const entry = acquirePng(imageData);
+      release = () => releasePng(imageData, entry);
+      entry.promise.then(
+        (u) => {
+          if (!cancelled) setUrl(u);
+        },
+        (err) => {
+          console.error('Failed to build source preview', err);
+          if (!cancelled) setUrl(UNRENDERABLE_URL);
+        },
+      );
     }
     return () => {
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
+      release?.();
     };
   }, [blob, filename, imageData]);
   return url;
