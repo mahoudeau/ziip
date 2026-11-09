@@ -29,7 +29,7 @@ export function StatsView({ asPage = false }: { asPage?: boolean } = {}) {
   // fresh reference appears each time you open the dashboard.
   const shown = useState(() => pickComparison(Math.max(0, s.totalBytesSaved)))[0];
   const shownIcon = shown ? iconForId(shown.id) : undefined;
-  const mostUsedPreset = [...ps].sort((a, b) => b.useCount - a.useCount)[0];
+  const mostUsedPreset = ps.filter((p) => p.useCount > 0).sort((a, b) => b.useCount - a.useCount)[0];
   const mostUsedFormat = CODEC_IDS.map((id) => ({ id, ...s.byFormat[id] }))
     .sort((a, b) => b.count - a.count)
     .find((f) => f.count > 0);
