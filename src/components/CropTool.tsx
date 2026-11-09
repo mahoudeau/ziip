@@ -13,6 +13,8 @@ import { useViewer, type ViewerApi } from '../lib/viewer';
 const HANDLE_SCREEN_PX = 12;
 const STROKE_SCREEN_PX = 1.5;
 const PIXEL_GRID_THRESHOLD = 4;
+/** Screen pixels a press must travel before it counts as drawing a new crop. */
+const DRAW_START_SCREEN_PX = 3;
 
 const CORNER_HANDLES: ReadonlyArray<HandleId> = ['nw', 'ne', 'se', 'sw'];
 const EDGE_HANDLES: ReadonlyArray<HandleId> = ['n', 'e', 's', 'w'];
@@ -35,6 +37,8 @@ interface DragState {
   startSrcY: number;
   startRect: CropRect;
   pointerId: number;
+  /** For `create`: set once the press has moved far enough to be a drag. */
+  drawing?: boolean;
 }
 
 interface Props {
@@ -126,7 +130,6 @@ export function CropTool({
       startRect: { x: p.x, y: p.y, width: 0, height: 0 },
       pointerId: e.pointerId,
     };
-    onRectChange({ x: p.x, y: p.y, width: 0, height: 0 });
   }
 
   function onPointerDownRect(e: PointerEvent) {
@@ -180,6 +183,11 @@ export function CropTool({
     const dy = p.y - drag.startSrcY;
     const start = drag.startRect;
 
+    if (drag.mode === 'create' && !drag.drawing) {
+      if (Math.hypot(dx, dy) * effectiveScale < DRAW_START_SCREEN_PX) return;
+      drag.drawing = true;
+    }
+
     let next: CropRect;
     if (drag.mode === 'create') {
       const ratio = aspectRatio ?? (e.shiftKey ? 1 : null);
@@ -216,9 +224,6 @@ export function CropTool({
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
     dragRef.current = null;
-    if (drag.mode === 'create' && rect && (rect.width < 1 || rect.height < 1)) {
-      onRectChange(null);
-    }
   }
 
   // Sizes in source-pixel units that work out to a fixed screen size.
