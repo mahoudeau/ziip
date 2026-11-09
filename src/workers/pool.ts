@@ -12,6 +12,7 @@ interface PendingJob {
 interface WorkerSlot {
   worker: Worker;
   busy: boolean;
+  jobId: number | null;
 }
 
 const POOL_SIZE = Math.max(1, (navigator.hardwareConcurrency ?? 2) - 1);
@@ -24,11 +25,36 @@ class CompressPool {
   private nextId = 1;
 
   constructor() {
-    for (let i = 0; i < POOL_SIZE; i++) {
-      const worker = new CompressWorker();
-      worker.onmessage = (e: MessageEvent<EncodeResult>) => this.handleResult(worker, e.data);
-      this.workers.push({ worker, busy: false });
+    for (let i = 0; i < POOL_SIZE; i++) this.workers.push(this.spawn());
+  }
+
+  private spawn(): WorkerSlot {
+    const worker = new CompressWorker();
+    const slot: WorkerSlot = { worker, busy: false, jobId: null };
+    worker.onmessage = (e: MessageEvent<EncodeResult>) => this.handleResult(worker, e.data);
+    worker.onerror = (e) => {
+      e.preventDefault();
+      this.replaceSlot(slot, new Error(e.message || 'The encoder stopped unexpectedly.'));
+    };
+    worker.onmessageerror = () => {
+      this.replaceSlot(slot, new Error('The encoder returned data that could not be read.'));
+    };
+    return slot;
+  }
+
+  /** Swap a dead worker for a fresh one and fail the job it was running, so the
+   * image shows an error instead of waiting forever. */
+  private replaceSlot(slot: WorkerSlot, reason: Error) {
+    const index = this.workers.indexOf(slot);
+    if (index === -1) return;
+    slot.worker.terminate();
+    this.workers[index] = this.spawn();
+    if (slot.jobId !== null) {
+      const pending = this.inflight.get(slot.jobId);
+      this.inflight.delete(slot.jobId);
+      pending?.reject(reason);
     }
+    this.dispatch();
   }
 
   enqueue(
@@ -53,17 +79,29 @@ class CompressPool {
       const pending = this.highQueue.shift() ?? this.normalQueue.shift();
       if (!pending) return;
       slot.busy = true;
+      slot.jobId = pending.job.id;
       this.inflight.set(pending.job.id, pending);
       // Structured-clone the ImageData (default postMessage behavior). We
       // intentionally do NOT transfer the buffer — the original ImageData
       // stays usable on the main thread for re-encodes at different settings.
-      slot.worker.postMessage(pending.job);
+      try {
+        slot.worker.postMessage(pending.job);
+      } catch (err) {
+        // Cloning a large ImageData can fail when memory is short.
+        slot.busy = false;
+        slot.jobId = null;
+        this.inflight.delete(pending.job.id);
+        pending.reject(err instanceof Error ? err : new Error(String(err)));
+      }
     }
   }
 
   private handleResult(worker: Worker, result: EncodeResult) {
     const slot = this.workers.find((s) => s.worker === worker);
-    if (slot) slot.busy = false;
+    if (slot) {
+      slot.busy = false;
+      slot.jobId = null;
+    }
     const pending = this.inflight.get(result.id);
     if (!pending) return;
     this.inflight.delete(result.id);

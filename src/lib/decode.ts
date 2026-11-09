@@ -30,6 +30,7 @@ interface PendingJob {
 interface WorkerSlot {
   worker: Worker;
   busy: boolean;
+  jobId: number | null;
 }
 
 const POOL_SIZE = Math.min(4, Math.max(2, (navigator.hardwareConcurrency ?? 2) - 1));
@@ -41,16 +42,44 @@ let nextJobId = 1;
 
 function ensurePool(): void {
   if (slots.length > 0) return;
-  for (let i = 0; i < POOL_SIZE; i++) {
-    const worker = new DecodeWorker();
-    worker.onmessage = (e: MessageEvent<DecodeResult>) => handleResult(worker, e.data);
-    slots.push({ worker, busy: false });
+  for (let i = 0; i < POOL_SIZE; i++) slots.push(spawnSlot());
+}
+
+function spawnSlot(): WorkerSlot {
+  const worker = new DecodeWorker();
+  const slot: WorkerSlot = { worker, busy: false, jobId: null };
+  worker.onmessage = (e: MessageEvent<DecodeResult>) => handleResult(worker, e.data);
+  worker.onerror = (e) => {
+    e.preventDefault();
+    replaceSlot(slot, new Error(e.message || 'The decoder stopped unexpectedly.'));
+  };
+  worker.onmessageerror = () => {
+    replaceSlot(slot, new Error('The decoder returned data that could not be read.'));
+  };
+  return slot;
+}
+
+/** Swap a dead worker for a fresh one and fail the job it was running, so the
+ * import reports an error instead of decoding forever. */
+function replaceSlot(slot: WorkerSlot, reason: Error): void {
+  const index = slots.indexOf(slot);
+  if (index === -1) return;
+  slot.worker.terminate();
+  slots[index] = spawnSlot();
+  if (slot.jobId !== null) {
+    const pending = inflight.get(slot.jobId);
+    inflight.delete(slot.jobId);
+    pending?.reject(reason);
   }
+  dispatch();
 }
 
 function handleResult(worker: Worker, result: DecodeResult): void {
   const slot = slots.find((s) => s.worker === worker);
-  if (slot) slot.busy = false;
+  if (slot) {
+    slot.busy = false;
+    slot.jobId = null;
+  }
   const pending = inflight.get(result.id);
   if (!pending) return;
   inflight.delete(result.id);
@@ -71,8 +100,16 @@ function dispatch(): void {
     if (!slot) return;
     const pending = queue.shift()!;
     slot.busy = true;
+    slot.jobId = pending.job.id;
     inflight.set(pending.job.id, pending);
-    slot.worker.postMessage(pending.job, pending.transfer);
+    try {
+      slot.worker.postMessage(pending.job, pending.transfer);
+    } catch (err) {
+      slot.busy = false;
+      slot.jobId = null;
+      inflight.delete(pending.job.id);
+      pending.reject(err instanceof Error ? err : new Error(String(err)));
+    }
   }
 }
 
