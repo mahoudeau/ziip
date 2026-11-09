@@ -69,16 +69,25 @@ export function Editor() {
     setPendingCodec(codecId);
   }, [codecId]);
   const draft = pendingByCodec.value;
-  const pendingOptions = draft[pendingCodec];
-  const pendingMeta = CODECS[pendingCodec];
   const optsSig = JSON.stringify(opts);
+  // The panel starts from what this image actually uses, not the shared draft.
+  const [imageDraft, setImageDraft] = useState<Partial<Record<CodecId, Record<string, unknown>>>>({
+    [codecId]: opts,
+  });
+  useEffect(() => {
+    setImageDraft({ [codecId]: opts });
+  }, [id, codecId, optsSig]);
+  const pendingOptions = imageDraft[pendingCodec] ?? draft[pendingCodec];
+  const pendingMeta = CODECS[pendingCodec];
   const isApplied = pendingCodec === codecId && JSON.stringify(pendingOptions) === optsSig;
   const isAtDefaults =
     JSON.stringify(pendingOptions) === JSON.stringify(CODECS[pendingCodec].defaults);
   function setPendingOptions(o: Record<string, unknown>) {
+    setImageDraft((d) => ({ ...d, [pendingCodec]: o }));
     setDraftFor(pendingCodec, o);
   }
   function resetPendingOptions() {
+    setImageDraft((d) => ({ ...d, [pendingCodec]: undefined }));
     resetDraftFor(pendingCodec);
   }
   const viewerApiRef = useRef<{ fit: () => void; zoom100: () => void } | null>(null);
