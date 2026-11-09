@@ -19,6 +19,28 @@ interface RecordedEncode {
 }
 /** What each image last added to the stats, so a re-encode replaces it. */
 const recordedByImage = new Map<string, RecordedEncode>();
+const controllerByImage = new Map<string, AbortController>();
+
+// When an image leaves the queue, stop its work and forget its bookkeeping.
+images.subscribe((list) => {
+  const live = new Set(list.map((img) => img.id));
+  for (const [id, controller] of controllerByImage) {
+    if (live.has(id)) continue;
+    controller.abort();
+    controllerByImage.delete(id);
+  }
+  for (const [id, handle] of timersByImage) {
+    if (live.has(id)) continue;
+    window.clearTimeout(handle);
+    timersByImage.delete(id);
+  }
+  for (const id of generationByImage.keys()) {
+    if (!live.has(id)) generationByImage.delete(id);
+  }
+  for (const id of recordedByImage.keys()) {
+    if (!live.has(id)) recordedByImage.delete(id);
+  }
+});
 
 /**
  * Schedule a (re-)encode for the given image. Coalesces rapid successive
@@ -51,6 +73,10 @@ async function runEncodeImage(id: string): Promise<void> {
   const gen = (generationByImage.get(id) ?? 0) + 1;
   generationByImage.set(id, gen);
 
+  controllerByImage.get(id)?.abort();
+  const controller = new AbortController();
+  controllerByImage.set(id, controller);
+
   // Each image carries its own codec + options now.
   const codecId = img.codec;
   const opts = img.options;
@@ -64,7 +90,13 @@ async function runEncodeImage(id: string): Promise<void> {
       if (generationByImage.get(id) !== gen) return;
     }
     const priority = id === selectedImageId.peek() ? 'high' : 'normal';
-    const { buffer, msElapsed } = await getCompressPool().enqueue(codecId, opts, data, priority);
+    const { buffer, msElapsed } = await getCompressPool().enqueue(
+      codecId,
+      opts,
+      data,
+      priority,
+      controller.signal,
+    );
     if (generationByImage.get(id) !== gen) return;
     if (!images.peek().some((i) => i.id === id)) return; // removed while encoding
     const blob = new Blob([buffer], { type: CODECS[codecId].outputMime });
@@ -110,5 +142,7 @@ async function runEncodeImage(id: string): Promise<void> {
       encoded: undefined,
       error: friendly,
     });
+  } finally {
+    if (controllerByImage.get(id) === controller) controllerByImage.delete(id);
   }
 }

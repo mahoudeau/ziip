@@ -62,14 +62,32 @@ class CompressPool {
     options: Record<string, unknown>,
     imageData: ImageData,
     priority: JobPriority = 'normal',
+    signal?: AbortSignal,
   ): Promise<{ buffer: ArrayBuffer; msElapsed: number }> {
     return new Promise((resolve, reject) => {
       const job: EncodeJob = { id: this.nextId++, codec, options, imageData };
       const pending: PendingJob = { job, resolve, reject };
+      signal?.addEventListener('abort', () => this.cancel(pending), { once: true });
       if (priority === 'high') this.highQueue.push(pending);
       else this.normalQueue.push(pending);
       this.dispatch();
     });
+  }
+
+  /** Drop a job that's no longer wanted. A running one can only be stopped by
+   * ending its worker, which also hands its memory back. */
+  private cancel(pending: PendingJob) {
+    const cancelled = new DOMException('Encode cancelled', 'AbortError');
+    for (const queue of [this.highQueue, this.normalQueue]) {
+      const index = queue.indexOf(pending);
+      if (index !== -1) {
+        queue.splice(index, 1);
+        pending.reject(cancelled);
+        return;
+      }
+    }
+    const slot = this.workers.find((s) => s.jobId === pending.job.id);
+    if (slot) this.replaceSlot(slot, cancelled);
   }
 
   private dispatch() {
