@@ -35,10 +35,12 @@ export function BatchActionBar() {
 
   async function downloadZip() {
     setZipping(true);
+    setSaveError(null);
     try {
       await downloadEncodedZip(items);
     } catch (err) {
       console.error('Zip download failed', err);
+      setSaveError("Couldn't build the zip. Try downloading the images one at a time.");
     } finally {
       setZipping(false);
     }
