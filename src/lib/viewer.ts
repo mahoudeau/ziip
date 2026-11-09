@@ -64,8 +64,16 @@ export function useViewer(
         (t as HTMLElement | null)?.isContentEditable === true
       );
     }
+    // A control reached by keyboard keeps Space. One that was just clicked
+    // doesn't, otherwise Space + drag would press it again on release.
+    function isKeyboardControl(e: KeyboardEvent): boolean {
+      return (
+        e.target instanceof Element &&
+        e.target.matches('button:focus-visible, a[href]:focus-visible, [role="button"]:focus-visible')
+      );
+    }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === ' ' && !isInInput(e)) {
+      if (e.key === ' ' && !isInInput(e) && !isKeyboardControl(e)) {
         if (!e.repeat) e.preventDefault();
         setSpaceHeld(true);
       }
