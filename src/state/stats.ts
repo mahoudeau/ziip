@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import type { CodecId } from '../codecs/types';
 import { CODEC_IDS } from '../codecs/registry';
-import { loadStoredStats, persistStats } from './persistence';
+import { loadStoredStats, onStoredChange, persistStats } from './persistence';
 
 export interface FormatStat {
   count: number;
@@ -47,6 +47,10 @@ function withMissingFormats(stats: GlobalStats): GlobalStats {
 
 const initial = loadStoredStats();
 export const stats = signal<GlobalStats>(initial ? withMissingFormats(initial) : emptyStats());
+onStoredChange('stats', () => {
+  const stored = loadStoredStats();
+  stats.value = stored ? withMissingFormats(stored) : emptyStats();
+});
 
 let saveTimer: number | null = null;
 function scheduleSave(): void {

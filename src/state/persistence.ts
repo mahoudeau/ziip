@@ -10,6 +10,16 @@ const KEY_PRESETS = `${KEY_PREFIX}presets`;
 const KEY_DRAFT = `${KEY_PREFIX}draft`;
 const KEY_STATS = `${KEY_PREFIX}stats`;
 
+const WATCHED_KEYS = { presets: KEY_PRESETS, draft: KEY_DRAFT, stats: KEY_STATS } as const;
+
+/** Run `reload` when another tab writes this data. Each tab holds a full copy
+ * and saves it whole, so a stale tab would otherwise erase the other's changes. */
+export function onStoredChange(kind: keyof typeof WATCHED_KEYS, reload: () => void): void {
+  window.addEventListener('storage', (e) => {
+    if (e.key === WATCHED_KEYS[kind] || e.key === null) reload();
+  });
+}
+
 interface PresetWire {
   id: unknown;
   name: unknown;

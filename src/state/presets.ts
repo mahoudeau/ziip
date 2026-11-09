@@ -1,6 +1,6 @@
 import { signal } from '@preact/signals';
 import type { CodecId } from '../codecs/types';
-import { loadStoredPresets, persistPresets } from './persistence';
+import { loadStoredPresets, onStoredChange, persistPresets } from './persistence';
 import { images, updateImage } from './images';
 import { codec as defaultCodec, options as defaultOptions } from './settings';
 import { scheduleEncodeAll, scheduleEncodeImage } from './encode';
@@ -25,6 +25,9 @@ export interface Preset {
 }
 
 export const presets = signal<Preset[]>(loadStoredPresets());
+onStoredChange('presets', () => {
+  presets.value = loadStoredPresets();
+});
 
 let saveTimer: number | null = null;
 function scheduleSave(): void {

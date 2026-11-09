@@ -1,7 +1,7 @@
 import { signal } from '@preact/signals';
 import { CODEC_IDS, CODECS } from '../codecs/registry';
 import type { CodecId } from '../codecs/types';
-import { loadStoredDraft, persistDraft } from './persistence';
+import { loadStoredDraft, onStoredChange, persistDraft } from './persistence';
 
 /** Per-codec options the user is configuring (the "draft" / pending state).
  * Shared between the Editor and Queue settings panels and persisted to
@@ -22,6 +22,9 @@ function buildInitialDraft(): Record<CodecId, Record<string, unknown>> {
 export const pendingByCodec = signal<Record<CodecId, Record<string, unknown>>>(
   buildInitialDraft(),
 );
+onStoredChange('draft', () => {
+  pendingByCodec.value = buildInitialDraft();
+});
 
 let saveTimer: number | null = null;
 function scheduleSave(): void {
