@@ -7,23 +7,16 @@ import { decodingCount } from '../state/images';
 export function DropZone() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleFiles(files: FileList | File[]) {
-    setError(null);
-    const err = await importImageFiles(files);
-    if (err) setError(err);
-  }
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setDragging(false);
-    if (e.dataTransfer?.files.length) void handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer?.files.length) void importImageFiles(e.dataTransfer.files);
   }
 
   function onChange(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
-    if (input.files?.length) void handleFiles(input.files);
+    if (input.files?.length) void importImageFiles(input.files);
     input.value = '';
   }
 
@@ -76,7 +69,6 @@ export function DropZone() {
           </p>
         )}
       </div>
-      {error && <p class="mt-6 text-sm text-red-600 max-w-md text-center">{error}</p>}
     </div>
   );
 }

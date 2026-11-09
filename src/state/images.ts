@@ -50,6 +50,9 @@ export const selectedImageId = signal<string | null>(null);
  * "decoding…" indicator — matters for slow inputs like HEIC, where libheif
  * takes a few seconds and nothing would otherwise show. */
 export const decodingCount = signal(0);
+/** Why the latest import lost files. Lives here rather than in a component
+ * because the drop zone unmounts as soon as the first good image lands. */
+export const importError = signal<string | null>(null);
 
 let nextId = 1;
 export function nextImageId(): string {

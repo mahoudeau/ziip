@@ -22,7 +22,6 @@ import { applyPresetToAll, getDefaultPreset } from '../state/presets';
 export function Queue() {
   const items = images.value;
   const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   // Land on the Presets tab when a default preset is set, so the user sees
   // straight away what's being applied to incoming images.
   const [showingPresets, setShowingPresets] = useState(() => !!getDefaultPreset());
@@ -51,16 +50,10 @@ export function Queue() {
     resetDraftFor(pendingCodec);
   }
 
-  async function handleFiles(files: FileList | File[]) {
-    setError(null);
-    const err = await importImageFiles(files);
-    if (err) setError(err);
-  }
-
   function onDrop(e: DragEvent) {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer?.files.length) void handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer?.files.length) void importImageFiles(e.dataTransfer.files);
   }
 
   return (
@@ -118,7 +111,6 @@ export function Queue() {
               )}
             </div>
           </div>
-          {error && <p class="mb-4 text-sm text-red-600">{error}</p>}
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {items.map((item) => (
               <QueueItem key={item.id} item={item} />

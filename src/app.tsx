@@ -1,4 +1,4 @@
-import { images, selectedImageId } from './state/images';
+import { images, importError, selectedImageId } from './state/images';
 import { route } from './state/route';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
@@ -31,6 +31,23 @@ export function App() {
       </a>
       <Header />
       <main id="main" tabIndex={-1} class="flex-1 outline-none">
+        {importError.value && (
+          <div role="alert" class="max-w-7xl mx-auto px-6 lg:px-8 pt-3">
+            <p class="flex items-start justify-between gap-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-600">
+              <span>{importError.value}</span>
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => {
+                  importError.value = null;
+                }}
+                class="shrink-0 hover:text-ink transition-colors"
+              >
+                ✕
+              </button>
+            </p>
+          </div>
+        )}
         {view === 'dashboard' ? (
           <StatsView asPage />
         ) : view === 'privacy' ? (
