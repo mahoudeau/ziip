@@ -1,5 +1,7 @@
+import { useEffect } from 'preact/hooks';
 import { images, importError, selectedImageId } from './state/images';
-import { route } from './state/route';
+import { navigate, route } from './state/route';
+import { importImageFiles } from './lib/importImages';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { Editor } from './components/Editor';
@@ -15,6 +17,36 @@ export function App() {
   const inEditor = selectedImageId.value !== null;
   const hasItems = images.value.length > 0;
   const showBatchBar = view === 'home' && hasItems;
+
+  // The queue only lives in memory. Files dropped outside a drop target would
+  // otherwise navigate the tab to the file and take the queue with it.
+  useEffect(() => {
+    const carriesFiles = (e: DragEvent) => e.dataTransfer?.types.includes('Files') === true;
+    function onDragOver(e: DragEvent) {
+      if (carriesFiles(e)) e.preventDefault();
+    }
+    function onDrop(e: DragEvent) {
+      if (e.defaultPrevented || !carriesFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer?.files.length) {
+        void importImageFiles(e.dataTransfer.files);
+        navigate('home');
+      }
+    }
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (images.peek().length === 0) return;
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, []);
 
   return (
     <div class="min-h-screen bg-bg text-ink flex flex-col">
