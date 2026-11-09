@@ -1,10 +1,9 @@
 import { decodeImageFile, isLikelyImageFile } from './decode';
-import { addImage, decodingCount, importError } from '../state/images';
+import { addImage, decodingCount, getClearCount, images, importError } from '../state/images';
 import { scheduleEncodeImage } from '../state/encode';
 import { codec, options } from '../state/settings';
 import { getDefaultPreset } from '../state/presets';
 import { formatBytes } from './format';
-import { images } from '../state/images';
 
 /** Decoded pixels stay in memory for re-encodes, at 4 bytes per pixel. Past
  * this a tab is likely to run out of memory and lose the whole queue. */
@@ -19,6 +18,7 @@ export async function importImageFiles(files: FileList | File[]): Promise<void> 
   importError.value = null;
   let firstError: string | null = null;
   let failed = 0;
+  const clearCountAtStart = getClearCount();
   // Decode in parallel so each tile appears as soon as its decode finishes.
   await Promise.all(
     Array.from(files).map(async (file) => {
@@ -30,6 +30,7 @@ export async function importImageFiles(files: FileList | File[]): Promise<void> 
       decodingCount.value++;
       try {
         const { imageData, notice } = await decodeImageFile(file);
+        if (getClearCount() !== clearCountAtStart) return;
         const retained = images.peek().reduce((sum, i) => sum + i.originalImageData.data.byteLength, 0);
         if (retained + imageData.data.byteLength > MAX_RETAINED_BYTES) {
           firstError ??= `No room for "${file.name}": Ziip is already holding ${formatBytes(retained)} of decoded images. Clear some and add it again.`;

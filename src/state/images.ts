@@ -76,7 +76,14 @@ export function removeImage(id: string): void {
   if (selectedImageId.value === id) selectedImageId.value = null;
 }
 
+let clearCount = 0;
+/** Changes on every Clear all, so an import in flight can tell it was cancelled. */
+export function getClearCount(): number {
+  return clearCount;
+}
+
 export function clearImages(): void {
+  clearCount++;
   images.value = [];
   selectedImageId.value = null;
 }
