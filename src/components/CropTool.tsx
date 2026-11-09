@@ -120,6 +120,7 @@ export function CropTool({
 
   function onPointerDownBackground(e: PointerEvent) {
     if (viewer.beginPan(e)) return;
+    if (e.button !== 0) return; // only the primary button draws
     const p = clientToSrc(e.clientX, e.clientY);
     if (!p) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);

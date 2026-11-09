@@ -81,11 +81,17 @@ export function useViewer(
     function onKeyUp(e: KeyboardEvent) {
       if (e.key === ' ') setSpaceHeld(false);
     }
+    // The keyup never arrives if Space is released in another window.
+    function onBlur() {
+      setSpaceHeld(false);
+    }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 
@@ -114,6 +120,7 @@ export function useViewer(
   }, [containerRef, fitRef]);
 
   function beginPan(e: PointerEvent, opts?: { force?: boolean }): boolean {
+    if (e.button !== 0 && e.button !== 1) return false; // right-click isn't a pan
     if (!opts?.force && !spaceHeld && e.button !== 1) return false;
     panRef.current = {
       pointerId: e.pointerId,
@@ -122,7 +129,16 @@ export function useViewer(
       startX: e.clientX,
       startY: e.clientY,
     };
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const target = e.currentTarget as Element;
+    target.setPointerCapture(e.pointerId);
+    // Covers a pointerup that never reaches us, which would leave a stuck pan.
+    target.addEventListener(
+      'lostpointercapture',
+      () => {
+        if (panRef.current?.pointerId === e.pointerId) panRef.current = null;
+      },
+      { once: true },
+    );
     e.preventDefault();
     return true;
   }
