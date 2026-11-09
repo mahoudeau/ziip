@@ -153,7 +153,12 @@ export function useViewer(
     const r = c.getBoundingClientRect();
     const fitScale = Math.min(r.width / sourceWidth, r.height / sourceHeight);
     if (fitScale > 0 && Number.isFinite(fitScale)) {
-      setState({ scale: 1 / fitScale, tx: 0, ty: 0 });
+      // Keep the image centred: tx/ty offset the scaled image from the fit box.
+      setState({
+        scale: 1 / fitScale,
+        tx: (sourceWidth * fitScale - sourceWidth) / 2,
+        ty: (sourceHeight * fitScale - sourceHeight) / 2,
+      });
     }
   }
 
