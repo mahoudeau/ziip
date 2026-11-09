@@ -152,15 +152,6 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
       onPointerMove={onContainerMove}
       onPointerUp={onContainerUp}
       onPointerCancel={onContainerUp}
-      onKeyDown={onKeyDown}
-      tabIndex={0}
-      role="slider"
-      aria-label="Before and after comparison. Use the arrow keys to move the divider."
-      aria-orientation="horizontal"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(pos * 100)}
-      aria-valuetext={`${Math.round(pos * 100)}% revealed`}
     >
       {/* Invisible reference box at the image's rest position — the viewer uses
           it as the transform origin for cursor-anchored zoom. */}
@@ -215,8 +206,17 @@ export function CompareSlider({ originalUrl, encodedUrl, encoding, onViewerReady
 
       {/* Divider hit zone — wide, transparent, captures the divider drag */}
       <div
-        class="absolute top-0 bottom-0"
+        class="absolute top-0 bottom-0 outline-none focus-visible:bg-brand/20"
         style={`left: ${pos * 100}%; width: ${DIVIDER_HIT_WIDTH}px; transform: translateX(-50%); cursor: ${viewer.spaceHeld ? 'grab' : 'ew-resize'}`}
+        tabIndex={0}
+        role="slider"
+        aria-label="Before and after comparison. Use the arrow keys to move the divider."
+        aria-orientation="horizontal"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pos * 100)}
+        aria-valuetext={`${Math.round(pos * 100)}% revealed`}
+        onKeyDown={onKeyDown}
         onPointerDown={onDividerDown}
         onPointerMove={onDividerMove}
         onPointerUp={onDividerUp}

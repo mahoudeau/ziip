@@ -37,19 +37,8 @@ export function QueueItem({ item }: Props) {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Edit ${item.filename}`}
-      class="bg-surface rounded-xl overflow-hidden hover:ring-2 hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand transition-all flex flex-col cursor-pointer"
+      class="bg-surface rounded-xl overflow-hidden hover:ring-2 hover:ring-brand transition-all flex flex-col cursor-pointer"
       onClick={() => selectImage(item.id)}
-      onKeyDown={(e) => {
-        // Only when focus is on the card itself, so Enter on the inner
-        // Download/Remove buttons doesn't also open the editor.
-        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          selectImage(item.id);
-        }
-      }}
     >
       <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
         <div class="flex items-center gap-1.5 min-w-0">
@@ -69,7 +58,13 @@ export function QueueItem({ item }: Props) {
           </span>
         )}
       </div>
-      <div class="relative aspect-square bg-bg overflow-hidden">
+      {/* The keyboard way in. A click here bubbles to the card, which opens the
+          editor; the card can't be a button itself with buttons inside it. */}
+      <button
+        type="button"
+        aria-label={`Edit ${item.filename}`}
+        class="relative block w-full aspect-square bg-bg overflow-hidden cursor-pointer focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+      >
         {previewUrl && (
           <img
             src={previewUrl}
@@ -78,7 +73,7 @@ export function QueueItem({ item }: Props) {
             draggable={false}
           />
         )}
-      </div>
+      </button>
       <div class="p-3 space-y-1.5">
         <p class="text-sm font-medium truncate" title={item.filename}>{item.filename}</p>
         <div class="flex justify-between text-xs text-faint tabular-nums">
