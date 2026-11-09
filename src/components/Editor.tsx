@@ -290,12 +290,18 @@ export function Editor() {
   }, [cropMode, liveCropRect, originalImageData.width, originalImageData.height, crop, id]);
 
   function updateRectField(patch: Partial<CropRect>) {
-    if (!liveCropRect) return;
+    // With no box yet, start from the whole image, so a crop can be typed.
+    const base = liveCropRect ?? {
+      x: 0,
+      y: 0,
+      width: originalImageData.width,
+      height: originalImageData.height,
+    };
     // Typing a position moves the box; typing a size trims it to the image.
     const limit = 'x' in patch || 'y' in patch ? moveRectInside : clampRect;
     setLiveCropRect(
       limit(
-        normalizeRect({ ...liveCropRect, ...patch }),
+        normalizeRect({ ...base, ...patch }),
         originalImageData.width,
         originalImageData.height,
       ),
@@ -560,10 +566,10 @@ function CropControls({
       </div>
 
       <div class="grid grid-cols-2 gap-2">
-        <FieldInput label="X" value={rect ? Math.round(rect.x) : 0} onChange={(v) => onUpdateField({ x: v })} disabled={!rect} />
-        <FieldInput label="Y" value={rect ? Math.round(rect.y) : 0} onChange={(v) => onUpdateField({ y: v })} disabled={!rect} />
-        <FieldInput label="W" value={rect ? Math.round(rect.width) : 0} onChange={(v) => onUpdateField({ width: v })} disabled={!rect} />
-        <FieldInput label="H" value={rect ? Math.round(rect.height) : 0} onChange={(v) => onUpdateField({ height: v })} disabled={!rect} />
+        <FieldInput label="X" value={rect ? Math.round(rect.x) : 0} onChange={(v) => onUpdateField({ x: v })} />
+        <FieldInput label="Y" value={rect ? Math.round(rect.y) : 0} onChange={(v) => onUpdateField({ y: v })} />
+        <FieldInput label="W" value={rect ? Math.round(rect.width) : 0} onChange={(v) => onUpdateField({ width: v })} />
+        <FieldInput label="H" value={rect ? Math.round(rect.height) : 0} onChange={(v) => onUpdateField({ height: v })} />
       </div>
 
       {!valid && (
@@ -699,12 +705,10 @@ function FieldInput({
   label,
   value,
   onChange,
-  disabled,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
-  disabled?: boolean;
 }) {
   const CROP_FIELD_NAMES: Record<string, string> = {
     X: 'Crop X position',
@@ -713,9 +717,9 @@ function FieldInput({
     H: 'Crop height',
   };
   return (
-    <label class={`flex items-center gap-1.5 ${disabled ? 'opacity-50' : ''}`}>
+    <label class="flex items-center gap-1.5">
       <span class="text-xs text-faint w-3">{label}</span>
-      <NudgeInput value={value} onChange={onChange} disabled={disabled} ariaLabel={CROP_FIELD_NAMES[label] ?? label} />
+      <NudgeInput value={value} onChange={onChange} ariaLabel={CROP_FIELD_NAMES[label] ?? label} />
     </label>
   );
 }
