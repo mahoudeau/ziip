@@ -11,7 +11,9 @@ export default defineConfig(({ mode }) => {
       preact(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        // Not autoUpdate: taking over an open tab removes the hashed chunks and
+        // codecs it still needs. A new version waits until the tabs are closed.
+        registerType: 'prompt',
         // Use the hand-written public/site.webmanifest instead of generating one.
         manifest: false,
         workbox: {
