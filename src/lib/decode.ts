@@ -199,10 +199,9 @@ async function rasterizeSvgFile(file: File): Promise<ImageData> {
 /** Length attribute → px number. Unitless and `px` accepted; `%`/other units
  * are treated as "no intrinsic size" so we fall back to the viewBox. */
 function parseLen(v: string | null): number {
-  if (!v) return NaN;
-  const s = v.trim();
-  if (s.endsWith('%')) return NaN;
-  const n = parseFloat(s);
+  const number = v?.trim().match(/^([\d.]+)(?:px)?$/i)?.[1];
+  if (!number) return NaN;
+  const n = parseFloat(number);
   return Number.isFinite(n) && n > 0 ? n : NaN;
 }
 
