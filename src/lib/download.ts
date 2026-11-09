@@ -121,13 +121,15 @@ export async function downloadEncodedZip(items: ImageItem[]): Promise<void> {
   if (ready.length === 0) return;
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
-  // Detect duplicate filenames so we can suffix them ("foo.jpg", "foo (2).jpg").
-  const counts = new Map<string, number>();
+  // Suffix duplicates ("foo.jpg", "foo (2).jpg"), checking the generated name
+  // too: a real "foo (2).jpg" later in the batch must not replace it. Compared
+  // without case because most desktop file systems ignore it when unzipping.
+  const used = new Set<string>();
   for (const item of ready) {
     const base = encodedFilename(item);
-    const n = (counts.get(base) ?? 0) + 1;
-    counts.set(base, n);
-    const name = n === 1 ? base : suffixName(base, n);
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n++) name = suffixName(base, n);
+    used.add(name.toLowerCase());
     zip.file(name, item.encoded!.blob);
   }
   const blob = await zip.generateAsync({ type: 'blob' });
