@@ -16,7 +16,7 @@ export function PrivacyPage() {
           <Li>Your files never leave your device. No uploads, ever.</Li>
           <Li>There’s no backend, no account, and no sign-in.</Li>
           <Li>No analytics, no tracking, no cookies.</Li>
-          <Li>After the first load, it keeps working offline.</Li>
+          <Li>After the first load, it keeps working offline with the formats you’ve already used.</Li>
         </ul>
       </Section>
 

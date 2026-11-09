@@ -98,9 +98,13 @@ async function runEncodeImage(id: string): Promise<void> {
     // memory exhaustion, or an invalid option combination. Surface
     // something more actionable in the UI.
     const dims = `${img.originalImageData.width}×${img.originalImageData.height}`;
+    // Codecs are downloaded on first use, so one that was never used can't
+    // load offline. The raw error here is an unhelpful fetch failure.
     const friendly = /aborted\(\)?/i.test(raw)
       ? `${CODECS[codecId].name} couldn't encode this image at ${dims}. Try lowering the effort/quality, picking another codec, or a smaller image.`
-      : raw;
+      : !navigator.onLine
+        ? `${CODECS[codecId].name} hasn't been downloaded yet. Use it once while online to have it offline.`
+        : raw;
     updateImage(id, {
       status: 'error',
       encoded: undefined,
