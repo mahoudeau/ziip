@@ -50,6 +50,9 @@ images.subscribe((list) => {
 export function scheduleEncodeImage(id: string): void {
   const existing = timersByImage.get(id);
   if (existing !== undefined) window.clearTimeout(existing);
+  // Bump now, not when the timer fires: a job finishing inside the debounce
+  // window is already out of date and must not mark the image done.
+  generationByImage.set(id, (generationByImage.get(id) ?? 0) + 1);
   const handle = window.setTimeout(() => {
     timersByImage.delete(id);
     void runEncodeImage(id);
@@ -70,8 +73,7 @@ async function runEncodeImage(id: string): Promise<void> {
   const img = images.peek().find((i) => i.id === id);
   if (!img) return;
 
-  const gen = (generationByImage.get(id) ?? 0) + 1;
-  generationByImage.set(id, gen);
+  const gen = generationByImage.get(id) ?? 0;
 
   controllerByImage.get(id)?.abort();
   const controller = new AbortController();
