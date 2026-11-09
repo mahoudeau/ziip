@@ -19,6 +19,7 @@ export function CodecPicker({ value, showingPresets, onSelectCodec, onSelectPres
         return (
           <button
             key={id}
+            aria-pressed={active}
             onClick={() => onSelectCodec(id)}
             class={`px-0.5 sm:px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
               active
@@ -35,6 +36,7 @@ export function CodecPicker({ value, showingPresets, onSelectCodec, onSelectPres
       })}
       <button
         key="presets"
+        aria-pressed={showingPresets}
         onClick={onSelectPresets}
         class={`px-0.5 sm:px-1 py-2 rounded transition-colors flex flex-col items-center leading-tight ${
           showingPresets
