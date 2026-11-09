@@ -52,6 +52,10 @@ function isValidPreset(raw: unknown): raw is Preset {
 
 /** Bring options saved by an older build up to what the encoders read today. */
 function migrateOptions(codec: string, options: Record<string, unknown>): Record<string, unknown> {
+  // The WebP checkbox used to overwrite the numeric flag with a boolean.
+  if (codec === 'webp' && typeof options.lossless === 'boolean') {
+    return { ...options, lossless: Number(options.lossless) };
+  }
   if (codec !== 'avif' || typeof options.cqLevel !== 'number') return options;
   // AVIF used to store cqLevel (0 best, 63 worst); the encoder reads quality.
   const { cqLevel, ...rest } = options;

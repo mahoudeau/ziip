@@ -65,7 +65,12 @@ function OptionControl({
             type="checkbox"
             checked={Boolean(value)}
             aria-describedby={hintId}
-            onChange={(e) => onChange((e.currentTarget as HTMLInputElement).checked)}
+            onChange={(e) => {
+              const on = (e.currentTarget as HTMLInputElement).checked;
+              // Some options are 0/1 flags. Keep the type so that switching one
+              // on and off again compares equal to its default.
+              onChange(typeof value === 'number' ? Number(on) : on);
+            }}
             class="accent-brand"
           />
           <span class="text-sm font-medium">{opt.label}</span>
