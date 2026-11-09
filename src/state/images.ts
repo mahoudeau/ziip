@@ -82,8 +82,23 @@ export function selectImage(id: string | null): void {
   selectedImageId.value = id;
 }
 
+/** Carry a resize over to a new crop at the same scale. A resize is stored as
+ * absolute pixels, so keeping it as is would stretch the new crop to fit. */
+function rescaleResize(img: ImageItem, crop: CropRect | undefined): ResizeTarget | undefined {
+  if (!img.resize) return undefined;
+  const oldWidth = img.crop ? img.crop.width : img.originalImageData.width;
+  const newWidth = crop ? crop.width : img.originalImageData.width;
+  const newHeight = crop ? crop.height : img.originalImageData.height;
+  const scale = img.resize.width / oldWidth;
+  const width = Math.max(1, Math.round(newWidth * scale));
+  const height = Math.max(1, Math.round(newHeight * scale));
+  return width === newWidth && height === newHeight ? undefined : { width, height };
+}
+
 export function setCrop(id: string, crop: CropRect | undefined): void {
-  updateImage(id, { crop, encoded: undefined, status: 'queued' });
+  const img = getImage(id);
+  const resize = img ? rescaleResize(img, crop) : undefined;
+  updateImage(id, { crop, resize, encoded: undefined, status: 'queued' });
 }
 
 export function setResize(id: string, resize: ResizeTarget | undefined): void {
