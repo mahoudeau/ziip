@@ -75,19 +75,19 @@ export const CODECS: Record<CodecId, CodecMeta> = {
     outputExt: 'avif',
     outputMime: 'image/avif',
     defaults: {
-      cqLevel: 33,
+      quality: 50,
       speed: 6,
       subsample: 1,
     },
     options: [
       {
         kind: 'range',
-        key: 'cqLevel',
-        label: 'Quality (cqLevel)',
+        key: 'quality',
+        label: 'Quality',
         min: 0,
-        max: 63,
+        max: 100,
         step: 1,
-        hint: '0 = lossless, 63 = worst. Lower is better quality.',
+        hint: 'Higher = better quality, larger file.',
       },
       {
         kind: 'range',
@@ -96,7 +96,7 @@ export const CODECS: Record<CodecId, CodecMeta> = {
         min: 0,
         max: 10,
         step: 1,
-        hint: 'Higher = faster encode, lower quality at the same cqLevel.',
+        hint: 'Higher = faster encode, larger file at the same quality.',
       },
       {
         kind: 'select',

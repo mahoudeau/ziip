@@ -40,13 +40,21 @@ function isValidPreset(raw: unknown): raw is Preset {
   );
 }
 
+/** Bring options saved by an older build up to what the encoders read today. */
+function migrateOptions(codec: string, options: Record<string, unknown>): Record<string, unknown> {
+  if (codec !== 'avif' || typeof options.cqLevel !== 'number') return options;
+  // AVIF used to store cqLevel (0 best, 63 worst); the encoder reads quality.
+  const { cqLevel, ...rest } = options;
+  return { ...rest, quality: Math.round(100 - ((cqLevel as number) / 63) * 100) };
+}
+
 function normalize(raw: unknown): Preset | null {
   if (!isValidPreset(raw)) return null;
   const out: Preset = {
     id: raw.id,
     name: raw.name,
     codec: raw.codec,
-    options: raw.options as Record<string, unknown>,
+    options: migrateOptions(raw.codec, raw.options as Record<string, unknown>),
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     useCount: typeof raw.useCount === 'number' ? raw.useCount : 0,
@@ -89,7 +97,11 @@ export function loadStoredDraft(): CodecDraftMap {
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return {};
-    return parsed as CodecDraftMap;
+    const migrated = Object.entries(parsed).map(([codec, opts]) => [
+      codec,
+      opts && typeof opts === 'object' ? migrateOptions(codec, opts as Record<string, unknown>) : opts,
+    ]);
+    return Object.fromEntries(migrated) as CodecDraftMap;
   } catch (err) {
     console.warn('Failed to load draft from localStorage', err);
     return {};
