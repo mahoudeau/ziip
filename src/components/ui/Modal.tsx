@@ -13,6 +13,10 @@ const FOCUSABLE =
 export function Modal({ title, onClose, children }: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  // Parents pass a new onClose on every render. Reading it through a ref keeps
+  // the effect below from re-running and pulling focus back mid-typing.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -25,13 +29,17 @@ export function Modal({ title, onClose, children }: Props) {
           )
         : [];
 
-    // Move focus into the dialog (the first field, else the dialog itself).
-    (focusables()[0] ?? dialog)?.focus();
+    // Move focus into the dialog: the first form field, else the first control
+    // (the close button comes first in the DOM), else the dialog itself.
+    const firstField = dialog?.querySelector<HTMLElement>(
+      'input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+    );
+    (firstField ?? focusables()[0] ?? dialog)?.focus();
 
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -57,7 +65,7 @@ export function Modal({ title, onClose, children }: Props) {
       window.removeEventListener('keydown', onKey);
       previouslyFocused?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
