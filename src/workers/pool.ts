@@ -128,7 +128,12 @@ class CompressPool {
     } else {
       pending.reject(new Error(result.error));
     }
-    this.dispatch();
+    // jsquash keeps one Wasm module per worker, and an aborted one stays broken.
+    if (slot && !result.ok && /aborted/i.test(result.error)) {
+      this.replaceSlot(slot, new Error(result.error));
+    } else {
+      this.dispatch();
+    }
   }
 }
 

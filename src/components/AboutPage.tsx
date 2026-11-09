@@ -19,7 +19,7 @@ export function AboutPage() {
       <h1 class="text-3xl font-display font-semibold tracking-tight mb-3">What is Ziip?</h1>
       <p class="text-muted text-lg mb-8">
         Ziip is a fast, private image compressor that runs entirely in your browser. Shrink
-        photos and graphics to modern formats, with no uploads, no limits, and no fuss.
+        photos and graphics to modern formats, with no uploads, no accounts, and no fuss.
       </p>
 
       <section class="bg-surface rounded-2xl p-6 shadow-sm mb-4">
