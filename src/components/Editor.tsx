@@ -235,6 +235,9 @@ export function Editor() {
         return;
       }
 
+      // Leave browser and OS shortcuts like Cmd+C and Cmd+R alone.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
       if (e.key === 'c' || e.key === 'C') {
         if (cropMode) setCropMode(false);
         else enterCropMode();
