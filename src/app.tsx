@@ -33,6 +33,18 @@ export function App() {
         navigate('home');
       }
     }
+    function onPaste(e: ClipboardEvent) {
+      const t = e.target;
+      const typing =
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        (t as HTMLElement | null)?.isContentEditable === true;
+      const files = e.clipboardData?.files;
+      if (typing || !files?.length) return;
+      e.preventDefault();
+      void importImageFiles(files);
+      navigate('home');
+    }
     function onBeforeUnload(e: BeforeUnloadEvent) {
       if (images.peek().length === 0) return;
       e.preventDefault();
@@ -40,10 +52,12 @@ export function App() {
     }
     window.addEventListener('dragover', onDragOver);
     window.addEventListener('drop', onDrop);
+    window.addEventListener('paste', onPaste);
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => {
       window.removeEventListener('dragover', onDragOver);
       window.removeEventListener('drop', onDrop);
+      window.removeEventListener('paste', onPaste);
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
   }, []);
