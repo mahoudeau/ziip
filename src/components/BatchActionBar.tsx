@@ -2,13 +2,14 @@ import { useState } from 'preact/hooks';
 import { images, clearImages } from '../state/images';
 import { downloadEncodedAll, downloadEncodedZip } from '../lib/download';
 import { CODECS } from '../codecs/registry';
-import { codec } from '../state/settings';
 import { formatBytes } from '../lib/format';
 import { Spinner } from './ui/Spinner';
 
 export function BatchActionBar() {
   const items = images.value;
-  const meta = CODECS[codec.value];
+  const first = items[0];
+  const formatName =
+    first && items.every((i) => i.codec === first.codec) ? CODECS[first.codec].name : 'Mixed';
   const doneItems = items.filter((i) => i.status === 'done' && i.encoded);
   const encoding = items.some((i) => i.status === 'encoding' || i.status === 'queued');
   const [zipping, setZipping] = useState(false);
@@ -51,7 +52,7 @@ export function BatchActionBar() {
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-x-3 gap-y-2 flex-wrap">
         <div class="text-xs text-muted tabular-nums flex items-center gap-3 flex-wrap">
           <span>
-            <span class="text-faint">Format:</span> {meta.name}
+            <span class="text-faint">Format:</span> {formatName}
           </span>
           <span role="status" aria-live="polite">
             <span class="text-faint">Done:</span> {doneItems.length} / {items.length}
