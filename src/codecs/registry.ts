@@ -21,8 +21,8 @@ export const CODECS: Record<CodecId, CodecMeta> = {
         label: 'Chroma subsampling',
         choices: [
           { label: '4:4:4 (no subsample)', value: 1 },
-          { label: '4:2:2', value: 2 },
-          { label: '4:2:0 (most compression)', value: 3 },
+          { label: '4:2:0', value: 2 },
+          { label: '3×3 (most compression)', value: 3 },
         ],
       },
       {
