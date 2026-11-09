@@ -256,7 +256,10 @@ export function Editor() {
         setCropMode(false);
         e.preventDefault();
       } else if (e.key === 'Enter') {
-        applyLiveCrop();
+        // Enter on a focused control belongs to that control.
+        if (target instanceof Element && target.closest('button, a[href], [role="button"]')) return;
+        // Same condition as the Apply button, so Enter can't clear a crop.
+        if (liveCropRect && liveCropRect.width >= 1 && liveCropRect.height >= 1) applyLiveCrop();
         e.preventDefault();
       } else if (e.key === 'r' || e.key === 'R') {
         setLiveCropRect(null);
