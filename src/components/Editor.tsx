@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useId, useMemo, useRef, useState } from 'preact/hooks';
 import {
   getImage,
   removeImage,
@@ -549,13 +549,15 @@ function CropControls({
   onClear,
 }: CropControlsProps) {
   const valid = rect && rect.width >= 1 && rect.height >= 1;
+  const aspectSelectId = useId();
   return (
     <div class="space-y-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
       <div class="text-xs font-medium text-amber-600 uppercase tracking-wide">Crop mode</div>
 
       <div>
-        <label class="block text-xs text-muted mb-1">Aspect ratio</label>
+        <label for={aspectSelectId} class="block text-xs text-muted mb-1">Aspect ratio</label>
         <select
+          id={aspectSelectId}
           value={aspectId}
           onChange={(e) => onAspectChange((e.currentTarget as HTMLSelectElement).value)}
           class="w-full bg-elevated text-ink text-sm rounded px-2 py-1.5 border border-border"
@@ -668,7 +670,7 @@ function ResizeControls({
   return (
     <div class="space-y-3">
       <div class="flex items-center justify-between">
-        <label class="text-sm font-medium">Resize</label>
+        <span class="text-sm font-medium">Resize</span>
         {!isOriginal && (
           <button
             type="button"

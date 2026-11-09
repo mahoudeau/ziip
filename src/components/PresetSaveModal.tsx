@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useId, useRef, useState } from 'preact/hooks';
 import type { CodecId } from '../codecs/types';
 import { CODECS } from '../codecs/registry';
 import { createPreset, findPresetByName, overwritePreset } from '../state/presets';
@@ -14,6 +14,7 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
   const [name, setName] = useState('');
   const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const nameId = useId();
   const meta = CODECS[codec];
 
   function trySave() {
@@ -43,8 +44,9 @@ export function PresetSaveModal({ codec, options, onClose }: Props) {
     <Modal title="Save preset" onClose={onClose}>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs text-muted mb-1">Name</label>
+          <label for={nameId} class="block text-xs text-muted mb-1">Name</label>
           <input
+            id={nameId}
             ref={inputRef}
             type="text"
             value={name}
