@@ -2,6 +2,7 @@ import DecodeWorker from '../workers/decode.worker?worker';
 
 type DecodeSource =
   | { kind: 'file'; file: File }
+  | { kind: 'tiff'; file: File }
   | { kind: 'jxl'; bytes: ArrayBuffer };
 
 interface DecodeJob {
@@ -10,13 +11,19 @@ interface DecodeJob {
 }
 
 type DecodeResult =
-  | { id: number; ok: true; bytes: ArrayBuffer; width: number; height: number }
+  | { id: number; ok: true; bytes: ArrayBuffer; width: number; height: number; notice?: string }
   | { id: number; ok: false; error: string };
+
+export interface DecodedImage {
+  imageData: ImageData;
+  /** Something the user should know about this import, such as dropped pages. */
+  notice?: string;
+}
 
 interface PendingJob {
   job: DecodeJob;
   transfer: Transferable[];
-  resolve: (data: ImageData) => void;
+  resolve: (data: DecodedImage) => void;
   reject: (err: Error) => void;
 }
 
@@ -48,9 +55,10 @@ function handleResult(worker: Worker, result: DecodeResult): void {
   if (!pending) return;
   inflight.delete(result.id);
   if (result.ok) {
-    pending.resolve(
-      new ImageData(new Uint8ClampedArray(result.bytes), result.width, result.height),
-    );
+    pending.resolve({
+      imageData: new ImageData(new Uint8ClampedArray(result.bytes), result.width, result.height),
+      notice: result.notice,
+    });
   } else {
     pending.reject(new Error(result.error));
   }
@@ -68,7 +76,7 @@ function dispatch(): void {
   }
 }
 
-function enqueueJob(source: DecodeSource, transfer: Transferable[]): Promise<ImageData> {
+function enqueueJob(source: DecodeSource, transfer: Transferable[]): Promise<DecodedImage> {
   ensurePool();
   return new Promise((resolve, reject) => {
     const id = nextJobId++;
@@ -80,8 +88,9 @@ function enqueueJob(source: DecodeSource, transfer: Transferable[]): Promise<Ima
 
 /** Extensions we accept beyond what `image/*` MIME sniffing reliably covers.
  * HEIC/HEIF often arrive with an empty or non-standard MIME type. */
-const EXTRA_EXT = /\.(heic|heif|svg)$/i;
+const EXTRA_EXT = /\.(heic|heif|svg|tiff?)$/i;
 const HEIC_EXT = /\.(heic|heif)$/i;
+const TIFF_EXT = /\.tiff?$/i;
 const SVG_EXT = /\.svg$/i;
 /** When an SVG has no intrinsic px size, rasterize its viewBox so the longest
  * side is this many pixels. The user can then rescale via the resize tool. */
@@ -97,27 +106,34 @@ function isHeic(type: string, name: string): boolean {
   return t === 'image/heic' || t === 'image/heif' || HEIC_EXT.test(name);
 }
 
+function isTiff(type: string, name: string): boolean {
+  return /^image\/(x-)?tiff?$/i.test(type) || TIFF_EXT.test(name);
+}
+
 /** Whether a preview can use the raw source blob directly. True for ordinary
  * raster formats (the blob renders and matches the decoded geometry). False
- * for HEIC/HEIF (can't render outside Safari) and SVG (renders, but its
- * geometry differs from the rasterized pixels we actually encode) — those
+ * for HEIC/HEIF and TIFF (can't render outside Safari) and SVG (renders, but
+ * its geometry differs from the rasterized pixels we actually encode). Those
  * preview from the decoded ImageData instead so the compare view lines up. */
 export function canPreviewFromSourceBlob(type: string, name: string): boolean {
-  return !isHeic(type, name) && !isSvg(type, name);
+  return !isHeic(type, name) && !isTiff(type, name) && !isSvg(type, name);
 }
 
 function isSvg(type: string, name: string): boolean {
   return type.toLowerCase() === 'image/svg+xml' || SVG_EXT.test(name);
 }
 
-export function decodeImageFile(file: File): Promise<ImageData> {
+export async function decodeImageFile(file: File): Promise<DecodedImage> {
   // HEIC/HEIF: browsers other than Safari can't decode these natively, so we
   // run libheif (via heic-to) on the main thread. heic-to embeds its own wasm
   // and internal worker, so it stays self-contained off our decode pool.
-  if (isHeic(file.type, file.name)) return decodeHeicFile(file);
+  if (isHeic(file.type, file.name)) return { imageData: await decodeHeicFile(file) };
   // SVG: rasterize on the main thread. createImageBitmap on an SVG blob isn't
   // reliable cross-browser and the decode worker has no DOM fallback.
-  if (isSvg(file.type, file.name)) return rasterizeSvgFile(file);
+  if (isSvg(file.type, file.name)) return { imageData: await rasterizeSvgFile(file) };
+  // TIFF: always through utif2, even in Safari, so every browser gets the same
+  // pixels. Runs in the decode pool because big scans take seconds to unpack.
+  if (isTiff(file.type, file.name)) return enqueueJob({ kind: 'tiff', file }, []);
   return enqueueJob({ kind: 'file', file }, []);
 }
 
@@ -203,6 +219,6 @@ export function bitmapToImageData(bitmap: ImageBitmap): ImageData {
 
 /** Decode JXL bytes (anywhere the browser can't do it natively — Chrome,
  * Firefox). Caller transfers ownership of `bytes`. */
-export function decodeJxlBytes(bytes: ArrayBuffer): Promise<ImageData> {
-  return enqueueJob({ kind: 'jxl', bytes }, [bytes]);
+export async function decodeJxlBytes(bytes: ArrayBuffer): Promise<ImageData> {
+  return (await enqueueJob({ kind: 'jxl', bytes }, [bytes])).imageData;
 }

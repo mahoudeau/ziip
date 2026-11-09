@@ -9,6 +9,13 @@ export function encodedFilename(item: ImageItem): string {
   return `${base}.${ext}`;
 }
 
+/** How long a download's object URL stays alive. The browser reads the blob
+ * after the click returns, and later still if it asks the user first, so
+ * revoking in the same tick can kill the download. */
+const REVOKE_DELAY_MS = 60_000;
+/** Gap between the anchor clicks of the fallback multi-file download. */
+const SEQUENTIAL_GAP_MS = 400;
+
 export function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -17,16 +24,90 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
 }
 
-export async function downloadEncodedSequential(items: ImageItem[]): Promise<void> {
-  for (const item of items) {
-    if (item.status !== 'done' || !item.encoded) continue;
-    triggerBlobDownload(item.encoded.blob, encodedFilename(item));
-    // A small gap so the browser handles each download cleanly. Some
-    // browsers throttle or merge rapid sequential downloads otherwise.
-    await new Promise((resolve) => setTimeout(resolve, 120));
+interface DirectoryPickerWindow {
+  showDirectoryPicker?: (options: {
+    id?: string;
+    mode: 'readwrite';
+    startIn?: 'pictures';
+  }) => Promise<FileSystemDirectoryHandle>;
+}
+
+function hasErrorName(err: unknown, name: string): boolean {
+  return err instanceof DOMException && err.name === name;
+}
+
+/** Create `filename` in `dir`, suffixing it rather than overwriting whatever
+ * is already there. Also covers duplicates within the batch, since each file
+ * exists by the time the next one is named. */
+async function createUniqueFile(
+  dir: FileSystemDirectoryHandle,
+  filename: string,
+): Promise<FileSystemFileHandle> {
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? filename : suffixName(filename, n);
+    try {
+      await dir.getFileHandle(name);
+    } catch (err) {
+      if (hasErrorName(err, 'NotFoundError')) return dir.getFileHandle(name, { create: true });
+      throw err;
+    }
+  }
+}
+
+/** All or nothing: if any write fails, remove what this run created, so there's
+ * no 0-byte file left behind and a retry doesn't save duplicates beside it. */
+async function saveToDirectory(dir: FileSystemDirectoryHandle, items: ImageItem[]): Promise<void> {
+  const created: string[] = [];
+  try {
+    for (const item of items) {
+      const handle = await createUniqueFile(dir, encodedFilename(item));
+      created.push(handle.name);
+      const writable = await handle.createWritable();
+      try {
+        await writable.write(item.encoded!.blob);
+        await writable.close();
+      } catch (err) {
+        await writable.abort().catch(() => undefined);
+        throw err;
+      }
+    }
+  } catch (err) {
+    await Promise.allSettled(created.map((name) => dir.removeEntry(name)));
+    throw err;
+  }
+}
+
+/**
+ * Save every encoded item as a separate file. Browsers only grant one download
+ * per click: from the second anchor click on, Chromium holds downloads behind a
+ * "download multiple files" permission, and until that's answered every later
+ * download on the page waits too. So where the File System Access API exists,
+ * ask for a folder once and write the files directly.
+ */
+export async function downloadEncodedAll(items: ImageItem[]): Promise<void> {
+  const ready = items.filter((i) => i.status === 'done' && i.encoded);
+  const { showDirectoryPicker } = window as unknown as DirectoryPickerWindow;
+  if (ready.length > 1 && showDirectoryPicker) {
+    let dir: FileSystemDirectoryHandle | undefined;
+    try {
+      dir = await showDirectoryPicker.call(window, {
+        id: 'ziip-download-all',
+        mode: 'readwrite',
+        // Not 'downloads': Chromium refuses that folder's root for this API.
+        startIn: 'pictures',
+      });
+    } catch (err) {
+      if (hasErrorName(err, 'AbortError')) return; // the user closed the picker
+      console.warn('Folder picker unavailable, falling back to anchor downloads', err);
+    }
+    if (dir) return saveToDirectory(dir, ready);
+  }
+  for (const [i, item] of ready.entries()) {
+    if (i > 0) await new Promise((resolve) => setTimeout(resolve, SEQUENTIAL_GAP_MS));
+    triggerBlobDownload(item.encoded!.blob, encodedFilename(item));
   }
 }
 

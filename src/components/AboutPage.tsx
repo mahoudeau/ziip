@@ -11,7 +11,7 @@ const FEATURES: ReadonlyArray<[string, string]> = [
   ['Download', 'Grab images one at a time or all together as a single zip.'],
 ];
 
-const INPUT_FORMATS = ['JPEG', 'PNG', 'WebP', 'AVIF', 'GIF', 'BMP', 'SVG (rasterized)', 'HEIC / HEIF'];
+const INPUT_FORMATS = ['JPEG', 'PNG', 'WebP', 'AVIF', 'GIF', 'BMP', 'SVG (rasterized)', 'HEIC / HEIF', 'TIFF'];
 
 export function AboutPage() {
   return (

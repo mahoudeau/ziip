@@ -160,7 +160,7 @@ function MiniDropzone() {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,.heic,.heif,.svg"
+        accept="image/*,.heic,.heif,.svg,.tif,.tiff"
         multiple
         class="hidden"
         onChange={(e) => {

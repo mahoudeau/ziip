@@ -20,13 +20,14 @@ export async function importImageFiles(files: FileList | File[]): Promise<string
       }
       decodingCount.value++;
       try {
-        const imageData = await decodeImageFile(file);
+        const { imageData, notice } = await decodeImageFile(file);
         const def = getDefaultPreset();
         const item = addImage({
           filename: file.name,
           originalBytes: file.size,
           originalImageData: imageData,
           originalBlob: file,
+          notice,
           codec: def ? def.codec : codec.peek(),
           options: def ? { ...def.options } : { ...options.peek() },
           presetId: def?.id,

@@ -88,6 +88,7 @@ export function QueueItem({ item }: Props) {
           </span>
         </div>
         {delta && <p class="text-xs text-muted tabular-nums">{delta}</p>}
+        {item.notice && <p class="text-xs text-amber-600">{item.notice}</p>}
         {item.status === 'error' && item.error && (
           <p class="text-xs text-red-600 line-clamp-2">{item.error}</p>
         )}

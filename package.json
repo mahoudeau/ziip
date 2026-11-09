@@ -26,7 +26,8 @@
     "@preact/signals": "^2.0.0",
     "heic-to": "^1.5.2",
     "jszip": "^3.10.1",
-    "preact": "^10.25.0"
+    "preact": "^10.25.0",
+    "utif2": "^4.1.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.0",

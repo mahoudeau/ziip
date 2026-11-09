@@ -25,6 +25,8 @@ export interface ImageItem {
   originalBytes: number;
   originalImageData: ImageData;
   originalBlob: Blob;
+  /** Shown on the queue card, for imports that succeeded with a caveat. */
+  notice?: string;
   /** Per-image codec choice. New images inherit from the global default in
    * `state/settings.ts`. The Editor mutates only this image's codec; the
    * Queue sidebar and "Apply to all" mutate every image's codec. */

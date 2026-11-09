@@ -3,6 +3,7 @@ declare const self: DedicatedWorkerGlobalScope;
 
 type DecodeSource =
   | { kind: 'file'; file: File }
+  | { kind: 'tiff'; file: File }
   | { kind: 'jxl'; bytes: ArrayBuffer };
 
 interface DecodeJob {
@@ -11,10 +12,15 @@ interface DecodeJob {
 }
 
 type DecodeResult =
-  | { id: number; ok: true; bytes: ArrayBuffer; width: number; height: number }
+  | { id: number; ok: true; bytes: ArrayBuffer; width: number; height: number; notice?: string }
   | { id: number; ok: false; error: string };
 
-async function decodeFile(file: File): Promise<ImageData> {
+interface Decoded {
+  imageData: ImageData;
+  notice?: string;
+}
+
+async function decodeFile(file: Blob): Promise<ImageData> {
   const bitmap = await createImageBitmap(file);
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext('2d');
@@ -32,11 +38,22 @@ async function decodeJxl(bytes: ArrayBuffer): Promise<ImageData> {
   return decode(bytes);
 }
 
+async function decodeTiffFile(file: File): Promise<Decoded> {
+  // Lazy-imported so the decoder only loads when a TIFF is actually dropped.
+  const { decodeTiff } = await import('./decodeTiff');
+  return decodeTiff(file, decodeFile);
+}
+
+async function decodeSource(source: DecodeSource): Promise<Decoded> {
+  if (source.kind === 'tiff') return decodeTiffFile(source.file);
+  if (source.kind === 'file') return { imageData: await decodeFile(source.file) };
+  return { imageData: await decodeJxl(source.bytes) };
+}
+
 self.onmessage = async (e: MessageEvent<DecodeJob>) => {
   const { id, source } = e.data;
   try {
-    const imageData =
-      source.kind === 'file' ? await decodeFile(source.file) : await decodeJxl(source.bytes);
+    const { imageData, notice } = await decodeSource(source);
     const buffer = imageData.data.buffer;
     const result: DecodeResult = {
       id,
@@ -44,6 +61,7 @@ self.onmessage = async (e: MessageEvent<DecodeJob>) => {
       bytes: buffer,
       width: imageData.width,
       height: imageData.height,
+      notice,
     };
     self.postMessage(result, [buffer]);
   } catch (err) {

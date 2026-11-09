@@ -60,7 +60,7 @@ export function DropZone() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,.heic,.heif,.svg"
+          accept="image/*,.heic,.heif,.svg,.tif,.tiff"
           multiple
           class="hidden"
           onChange={onChange}

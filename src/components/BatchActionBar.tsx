@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { images, clearImages } from '../state/images';
-import { downloadEncodedSequential, downloadEncodedZip } from '../lib/download';
+import { downloadEncodedAll, downloadEncodedZip } from '../lib/download';
 import { CODECS } from '../codecs/registry';
 import { codec } from '../state/settings';
 import { formatBytes } from '../lib/format';
@@ -12,14 +12,25 @@ export function BatchActionBar() {
   const doneItems = items.filter((i) => i.status === 'done' && i.encoded);
   const encoding = items.some((i) => i.status === 'encoding' || i.status === 'queued');
   const [zipping, setZipping] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
 
   const totalIn = items.reduce((sum, i) => sum + i.originalBytes, 0);
   const totalOut = doneItems.reduce((sum, i) => sum + (i.encoded?.bytes ?? 0), 0);
   const allDone = items.length > 0 && doneItems.length === items.length;
 
-  function downloadAll() {
-    void downloadEncodedSequential(items);
+  async function downloadAll() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await downloadEncodedAll(items);
+    } catch (err) {
+      console.error('Download all failed', err);
+      setSaveError("Couldn't save the files. Try Download zip instead.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function downloadZip() {
@@ -46,6 +57,11 @@ export function BatchActionBar() {
           {totalOut > 0 && (
             <span>
               <span class="text-faint">Total:</span> {formatBytes(totalIn)} → {formatBytes(totalOut)}
+            </span>
+          )}
+          {saveError && (
+            <span role="alert" class="text-red-600">
+              {saveError}
             </span>
           )}
         </div>
@@ -80,14 +96,16 @@ export function BatchActionBar() {
           )}
           <button
             onClick={downloadAll}
-            disabled={doneItems.length === 0 || encoding || zipping}
+            disabled={doneItems.length === 0 || encoding || zipping || saving}
             class="px-3 sm:px-4 py-2 bg-elevated text-ink text-sm font-medium rounded hover:bg-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
-            Download all{!allDone && doneItems.length > 0 ? ` (${doneItems.length})` : ''}
+            {saving
+              ? 'Saving…'
+              : `Download all${!allDone && doneItems.length > 0 ? ` (${doneItems.length})` : ''}`}
           </button>
           <button
             onClick={downloadZip}
-            disabled={doneItems.length === 0 || encoding || zipping}
+            disabled={doneItems.length === 0 || encoding || zipping || saving}
             class="px-3 sm:px-4 py-2 bg-brand text-white text-sm font-medium rounded hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 whitespace-nowrap"
           >
             {zipping && <Spinner size={12} />}
