@@ -51,14 +51,51 @@ export function normalizeRect(rect: CropRect): CropRect {
   };
 }
 
+/** Trim a rect to the image. Each edge is limited on its own, so a side dragged
+ * past the border stops there and the opposite side stays where it was. */
 export function clampRect(rect: CropRect, sourceWidth: number, sourceHeight: number): CropRect {
-  const x = Math.max(0, Math.min(sourceWidth - 1, rect.x));
-  const y = Math.max(0, Math.min(sourceHeight - 1, rect.y));
+  const left = Math.max(0, Math.min(sourceWidth - 1, rect.x));
+  const top = Math.max(0, Math.min(sourceHeight - 1, rect.y));
+  const right = Math.max(left + 1, Math.min(sourceWidth, rect.x + rect.width));
+  const bottom = Math.max(top + 1, Math.min(sourceHeight, rect.y + rect.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** Slide a rect back inside the image without changing its size. */
+export function moveRectInside(rect: CropRect, sourceWidth: number, sourceHeight: number): CropRect {
+  const width = Math.min(sourceWidth, rect.width);
+  const height = Math.min(sourceHeight, rect.height);
   return {
-    x,
-    y,
-    width: Math.max(1, Math.min(sourceWidth - x, rect.width)),
-    height: Math.max(1, Math.min(sourceHeight - y, rect.height)),
+    x: Math.max(0, Math.min(sourceWidth - width, rect.x)),
+    y: Math.max(0, Math.min(sourceHeight - height, rect.y)),
+    width,
+    height,
+  };
+}
+
+/** Shrink a rect around a fixed point until it fits the image. Both axes scale
+ * together, so a locked aspect ratio survives hitting the border. */
+export function fitWithinAround(
+  rect: CropRect,
+  anchorX: number,
+  anchorY: number,
+  sourceWidth: number,
+  sourceHeight: number,
+): CropRect {
+  const left = anchorX - rect.x;
+  const right = rect.x + rect.width - anchorX;
+  const up = anchorY - rect.y;
+  const down = rect.y + rect.height - anchorY;
+  let scale = 1;
+  if (left > 0) scale = Math.min(scale, anchorX / left);
+  if (right > 0) scale = Math.min(scale, (sourceWidth - anchorX) / right);
+  if (up > 0) scale = Math.min(scale, anchorY / up);
+  if (down > 0) scale = Math.min(scale, (sourceHeight - anchorY) / down);
+  return {
+    x: anchorX - left * scale,
+    y: anchorY - up * scale,
+    width: rect.width * scale,
+    height: rect.height * scale,
   };
 }
 

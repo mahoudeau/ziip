@@ -25,7 +25,7 @@ import { PresetsPanel } from './PresetsPanel';
 import { PresetSaveModal } from './PresetSaveModal';
 import { applyPresetToImage } from '../state/presets';
 import type { CropRect } from '../lib/crop';
-import { ASPECT_RATIOS, clampRect, cropImageData, normalizeRect } from '../lib/crop';
+import { ASPECT_RATIOS, clampRect, cropImageData, moveRectInside, normalizeRect } from '../lib/crop';
 import { formatBytes, formatDeltaPct } from '../lib/format';
 import { triggerBlobDownload } from '../lib/download';
 import { getRenderablePreviewUrl, useRenderableSourceUrl } from '../lib/preview';
@@ -197,9 +197,13 @@ export function Editor() {
       const cx = prev.x + prev.width / 2;
       const cy = prev.y + prev.height / 2;
       const area = prev.width * prev.height;
-      const newH = Math.sqrt(area / aspectRatio);
-      const newW = newH * aspectRatio;
-      return clampRect(
+      const fullH = Math.sqrt(area / aspectRatio);
+      const fullW = fullH * aspectRatio;
+      // Scale both sides to fit, so the new ratio survives on a tight image.
+      const fit = Math.min(1, originalImageData.width / fullW, originalImageData.height / fullH);
+      const newW = fullW * fit;
+      const newH = fullH * fit;
+      return moveRectInside(
         normalizeRect({
           x: cx - newW / 2,
           y: cy - newH / 2,
@@ -267,7 +271,7 @@ export function Editor() {
         else if (e.key === 'ArrowDown') dy = step;
         e.preventDefault();
         setLiveCropRect(
-          clampRect(
+          moveRectInside(
             normalizeRect({ ...liveCropRect, x: liveCropRect.x + dx, y: liveCropRect.y + dy }),
             originalImageData.width,
             originalImageData.height,
@@ -281,8 +285,10 @@ export function Editor() {
 
   function updateRectField(patch: Partial<CropRect>) {
     if (!liveCropRect) return;
+    // Typing a position moves the box; typing a size trims it to the image.
+    const limit = 'x' in patch || 'y' in patch ? moveRectInside : clampRect;
     setLiveCropRect(
-      clampRect(
+      limit(
         normalizeRect({ ...liveCropRect, ...patch }),
         originalImageData.width,
         originalImageData.height,

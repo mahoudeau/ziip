@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { CropRect, HandleId } from '../lib/crop';
-import { applyResize, clampRect, constrainCreate, normalizeRect } from '../lib/crop';
+import {
+  applyResize,
+  clampRect,
+  constrainCreate,
+  fitWithinAround,
+  moveRectInside,
+  normalizeRect,
+} from '../lib/crop';
 import { useViewer, type ViewerApi } from '../lib/viewer';
 
 const HANDLE_SCREEN_PX = 12;
@@ -159,32 +166,47 @@ export function CropTool({
     if (viewer.movePan(e)) return;
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    const p = clientToSrc(e.clientX, e.clientY);
-    if (!p) return;
+    const raw = clientToSrc(e.clientX, e.clientY);
+    if (!raw) return;
+    // Drawing stops at the border, so the point the drag started from stays put.
+    const p =
+      drag.mode === 'create'
+        ? {
+            x: Math.max(0, Math.min(sourceWidth, raw.x)),
+            y: Math.max(0, Math.min(sourceHeight, raw.y)),
+          }
+        : raw;
     const dx = p.x - drag.startSrcX;
     const dy = p.y - drag.startSrcY;
+    const start = drag.startRect;
 
     let next: CropRect;
     if (drag.mode === 'create') {
       const ratio = aspectRatio ?? (e.shiftKey ? 1 : null);
       if (ratio != null && (Math.abs(dx) > 0 || Math.abs(dy) > 0)) {
-        next = constrainCreate({ x: drag.startRect.x, y: drag.startRect.y }, dx, dy, ratio);
+        const drawn = constrainCreate({ x: start.x, y: start.y }, dx, dy, ratio);
+        next = fitWithinAround(normalizeRect(drawn), start.x, start.y, sourceWidth, sourceHeight);
       } else {
-        next = { x: drag.startRect.x, y: drag.startRect.y, width: dx, height: dy };
+        next = { x: start.x, y: start.y, width: dx, height: dy };
       }
     } else if (drag.mode === 'move') {
-      next = {
-        x: drag.startRect.x + dx,
-        y: drag.startRect.y + dy,
-        width: drag.startRect.width,
-        height: drag.startRect.height,
-      };
+      next = moveRectInside(
+        { x: start.x + dx, y: start.y + dy, width: start.width, height: start.height },
+        sourceWidth,
+        sourceHeight,
+      );
     } else {
-      next = applyResize(drag.startRect, drag.handle!, dx, dy, {
+      const handle = drag.handle!;
+      next = applyResize(start, handle, dx, dy, {
         aspectRatio,
         shiftKey: e.shiftKey,
         altKey: e.altKey,
       });
+      if (aspectRatio != null || (e.shiftKey && handle.length === 2)) {
+        const anchorX = e.altKey ? start.x + start.width / 2 : handle.includes('e') ? start.x : start.x + start.width;
+        const anchorY = e.altKey ? start.y + start.height / 2 : handle.includes('s') ? start.y : start.y + start.height;
+        next = fitWithinAround(normalizeRect(next), anchorX, anchorY, sourceWidth, sourceHeight);
+      }
     }
     commit(next);
   }
