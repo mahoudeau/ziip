@@ -17,7 +17,7 @@ export function setCodec(next: CodecId): void {
   codec.value = next;
   options.value = newOpts;
   for (const img of images.peek()) {
-    updateImage(img.id, { codec: next, options: { ...newOpts } });
+    updateImage(img.id, { codec: next, options: { ...newOpts }, presetId: undefined });
   }
   scheduleEncodeAll();
 }
@@ -27,7 +27,7 @@ export function setOptions(next: Record<string, unknown>): void {
   options.value = next;
   const c = codec.peek();
   for (const img of images.peek()) {
-    updateImage(img.id, { codec: c, options: { ...next } });
+    updateImage(img.id, { codec: c, options: { ...next }, presetId: undefined });
   }
   scheduleEncodeAll();
 }
@@ -39,7 +39,7 @@ export function applyToAll(c: CodecId, o: Record<string, unknown>): void {
   codec.value = c;
   options.value = { ...o };
   for (const img of images.peek()) {
-    updateImage(img.id, { codec: c, options: { ...o } });
+    updateImage(img.id, { codec: c, options: { ...o }, presetId: undefined });
   }
   scheduleEncodeAll();
 }
