@@ -3,7 +3,7 @@ const BYTE_UNITS = ['KB', 'MB', 'GB', 'TB', 'PB'] as const;
 /** Human-readable byte size. Rolls up through the unit ladder so the number
  * always stays under 1024 (largest shown is "1023.99 PB"), keeping it compact. */
 export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
   let value = bytes / 1024;
   let i = 0;
   while (value >= 1024 && i < BYTE_UNITS.length - 1) {
