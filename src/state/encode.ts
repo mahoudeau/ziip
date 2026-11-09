@@ -1,14 +1,24 @@
 import { CODECS } from '../codecs/registry';
+import type { CodecId } from '../codecs/types';
 import { cropImageData } from '../lib/crop';
 import { resizeImageData } from '../lib/resize';
 import { getCompressPool } from '../workers/pool';
 import { images, selectedImageId, updateImage } from './images';
-import { recordCompression } from './stats';
+import { recordCompression, undoCompression } from './stats';
 
 const DEBOUNCE_MS = 250;
 
 const timersByImage = new Map<string, number>();
 const generationByImage = new Map<string, number>();
+
+interface RecordedEncode {
+  codec: CodecId;
+  bytesIn: number;
+  bytesOut: number;
+  presetId?: string;
+}
+/** What each image last added to the stats, so a re-encode replaces it. */
+const recordedByImage = new Map<string, RecordedEncode>();
 
 /**
  * Schedule a (re-)encode for the given image. Coalesces rapid successive
@@ -56,18 +66,28 @@ async function runEncodeImage(id: string): Promise<void> {
     const priority = id === selectedImageId.peek() ? 'high' : 'normal';
     const { buffer, msElapsed } = await getCompressPool().enqueue(codecId, opts, data, priority);
     if (generationByImage.get(id) !== gen) return;
+    if (!images.peek().some((i) => i.id === id)) return; // removed while encoding
     const blob = new Blob([buffer], { type: CODECS[codecId].outputMime });
     updateImage(id, {
       status: 'done',
       encoded: { bytes: blob.size, blob, codec: codecId, msElapsed },
       error: undefined,
     });
+    const previous = recordedByImage.get(id);
+    if (previous) undoCompression(previous.codec, previous.bytesIn, previous.bytesOut);
     recordCompression(codecId, img.originalBytes, blob.size);
-    if (img.presetId) {
+    recordedByImage.set(id, {
+      codec: codecId,
+      bytesIn: img.originalBytes,
+      bytesOut: blob.size,
+      presetId: img.presetId,
+    });
+    if (img.presetId || previous?.presetId) {
       // Lazy require to avoid an import cycle: presets.ts imports from
       // encode.ts, so we can't import presets at the top.
-      const { recordPresetUse } = await import('./presets');
-      recordPresetUse(img.presetId, img.originalBytes, blob.size);
+      const { recordPresetUse, undoPresetUse } = await import('./presets');
+      if (previous?.presetId) undoPresetUse(previous.presetId, previous.bytesIn, previous.bytesOut);
+      if (img.presetId) recordPresetUse(img.presetId, img.originalBytes, blob.size);
     }
   } catch (err) {
     if (generationByImage.get(id) !== gen) return;

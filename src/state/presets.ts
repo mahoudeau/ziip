@@ -150,6 +150,23 @@ export function applyPresetToAll(presetId: string): void {
   scheduleEncodeAll();
 }
 
+/** Take back an earlier `recordPresetUse` when the image is re-encoded. */
+export function undoPresetUse(id: string, bytesIn: number, bytesOut: number): void {
+  presets.value = presets.value.map((p) => {
+    if (p.id !== id) return p;
+    const nextIn = Math.max(0, p.bytesIn - bytesIn);
+    const nextOut = Math.max(0, p.bytesOut - bytesOut);
+    return {
+      ...p,
+      useCount: Math.max(0, p.useCount - 1),
+      bytesIn: nextIn,
+      bytesOut: nextOut,
+      bytesSaved: nextIn - nextOut,
+    };
+  });
+  scheduleSave();
+}
+
 /** Increment usage counters after a successful compression. */
 export function recordPresetUse(id: string, bytesIn: number, bytesOut: number): void {
   const found = presets.peek().find((p) => p.id === id);

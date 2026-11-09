@@ -81,6 +81,32 @@ export function recordCompression(codec: CodecId, bytesIn: number, bytesOut: num
   scheduleSave();
 }
 
+/** Take back an earlier `recordCompression` when the same image is re-encoded,
+ * so an image counts once, at its latest result. Floored at zero because the
+ * stats may have been reset since the earlier result was recorded. */
+export function undoCompression(codec: CodecId, bytesIn: number, bytesOut: number): void {
+  const cur = stats.peek();
+  const fmt = cur.byFormat[codec] ?? { count: 0, bytesIn: 0, bytesOut: 0 };
+  const totalBytesIn = Math.max(0, cur.totalBytesIn - bytesIn);
+  const totalBytesOut = Math.max(0, cur.totalBytesOut - bytesOut);
+  stats.value = {
+    ...cur,
+    totalCompressions: Math.max(0, cur.totalCompressions - 1),
+    totalBytesIn,
+    totalBytesOut,
+    totalBytesSaved: totalBytesIn - totalBytesOut,
+    byFormat: {
+      ...cur.byFormat,
+      [codec]: {
+        count: Math.max(0, fmt.count - 1),
+        bytesIn: Math.max(0, fmt.bytesIn - bytesIn),
+        bytesOut: Math.max(0, fmt.bytesOut - bytesOut),
+      },
+    },
+  };
+  scheduleSave();
+}
+
 export function clearStats(): void {
   stats.value = emptyStats();
   scheduleSave();
